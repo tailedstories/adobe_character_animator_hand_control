@@ -1,15 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun May 30 01:02:16 2021
-
-@author: moroz
-"""
-
 import cv2
 import mediapipe as mp
-from mediapipe.framework.formats import landmark_pb2
 import math
-
 import rtmidi
 
 
@@ -18,8 +9,17 @@ mp_pose = mp.solutions.pose
 
 midiout = rtmidi.MidiOut()
 available_ports = midiout.get_ports()
-midiout.open_port(1)
 
+
+#########
+## SET ##
+## UP  ##
+#########
+
+#this should be a reference to a loopmidi (number)
+midiout.open_port(1)
+#this should be a reference to your camera (number)
+cam_ref=0
 
 
 
@@ -53,7 +53,7 @@ def myAngle(cx, cy, ex, ey):
 
 
 # For webcam input:
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(cam_ref)
 x=0
 tmp_ind=0
 tmp_ind2=0
