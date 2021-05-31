@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import math
 import rtmidi
+import time
 
 
 mp_drawing = mp.solutions.drawing_utils
@@ -19,7 +20,7 @@ available_ports = midiout.get_ports()
 #this should be a reference to a loopmidi (number)
 midiout.open_port(1)
 #this should be a reference to your camera (number)
-cam_ref=0
+cam_ref=3
 
 
 
@@ -55,10 +56,12 @@ def myAngle(cx, cy, ex, ey):
 # For webcam input:
 cap = cv2.VideoCapture(cam_ref)
 x=0
-tmp_ind=0
-tmp_ind2=0
-tmp_ind_r=0
-tmp_ind_l=0
+tmp_ind  = 0
+tmp_ind2 = 0
+tmp_ind_r= 0
+tmp_ind_l= 0
+tmp_pos  = 0
+pos_curr = 0
 with mp_pose.Pose(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5) as pose:
@@ -200,7 +203,44 @@ with mp_pose.Pose(
                     x=2
                     midiout.send_message([0x90, 82, 100])
                     #print ("Left Out")
-        
+            
+            #screen position
+            if abs(tmp_pos-int(keypoints[24].get("X")*100)) > 5:
+                pos_curr = int(keypoints[24].get("X")*100) #/keypoints[23].get("X"))
+                tmp_pos = pos_curr
+                #print(pos_curr)
+                #time.sleep(0.1)
+                #(x, in_min, in_max, out_min, out_max):
+                pos_curr  = remap(pos_curr, 0, 99, 0, 127)
+                midiout.send_message([176, 22, pos_curr])
+                
+            
+            # <3QT face
+            if int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) <= 30:
+                if x != 3:
+                    x = 3
+                    midiout.send_message([0x90, 84, 100])
+                    print("<3QT")
+                    
+            # Center Face
+            if int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) > 30 and int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) > 30:
+                if x != 4:
+                    x = 4
+                    midiout.send_message([0x90, 85, 100])
+                    print("Center")
+                    
+            # >3QT face
+            if int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) <= 30:
+                if x != 3:
+                    x = 3
+                    midiout.send_message([0x90, 84, 100])
+                    print(">3QT")
+            
+            
+            #print(int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000))
+            
+            
+            
     if cv2.waitKey(5) & 0xFF == 27:
       break
 cap.release()
