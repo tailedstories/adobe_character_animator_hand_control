@@ -22,7 +22,38 @@ midiout.open_port(1)
 #this should be a reference to your camera (number)
 cam_ref=3
 
+# midi values
 
+#Right Arm
+right_shoulder_midi   = 20
+right_elbow_midi      = 21
+right_wrist_midi      = 80
+right_wrist_flip_midi = 81
+#Left Arm
+left_shoulder_midi   = 17
+left_elbow_midi      = 18
+left_wrist_midi      = 82
+left_wrist_flip_midi = 83
+#Screen Position (walking behavior px)
+screen_position_midi = 22
+
+#<3QT face note
+l3qt_midi = 84
+#Front face note
+center_midi = 85
+#>3QT face note
+r3qt_midi = 86
+
+# Right turn
+right_midi = 87
+# Left turn
+left_midi = 88
+
+def changeRate(x1,x2):
+    if x1 == 0 or x2 == 0:
+        x1+=1
+        x2+=1
+    return (x2-x1)/x1
 
 def prepangle(x1,y1,x2,y2,x3,y3):
     a1 = myAngle(x1,y1,x2,y2)
@@ -73,8 +104,10 @@ with mp_pose.Pose(
       continue
 
     # Flip the image horizontally for a later selfie-view display, and convert
+    
     # the BGR image to RGB.
-    image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
+    #image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # To improve performance, optionally mark the image as not writeable to
     # pass by reference.
     image.flags.writeable = False
@@ -118,21 +151,21 @@ with mp_pose.Pose(
                 if abs(tmp_ind_r - int(my_elbow_r)) > 2:
                     NewValue = remap(int(my_elbow_r), 0, 165, 62, 127)
                     tmp_ind_r = int(my_elbow_r)
-                    midiout.send_message([176, 21, int(NewValue)])    
+                    midiout.send_message([176, right_elbow_midi, int(NewValue)])    
                     #time.sleep(0.1)
                     #print ("Elbow - ", NewValue)
             if int(my_elbow_r) < 0 and int(my_elbow_r) > -90:
                 if abs(tmp_ind_r - int(my_elbow_r)) > 2:
                     NewValue = remap(int(my_elbow_r)+90, 0, 90, 31, 61)
                     tmp_ind_r = int(my_elbow_r)
-                    midiout.send_message([176, 21, int(NewValue)])
+                    midiout.send_message([176, right_elbow_midi, int(NewValue)])
                     #time.sleep(0.1)
                     #print ("Elbow - ", NewValue)
             if int(my_elbow_r) < 270 and int(my_elbow_r) > 179:
                 if abs(tmp_ind_r - int(my_elbow_r)) > 2:                
                     NewValue = abs(remap(int(my_elbow_r), 180, 270, 0, 30))
                     tmp_ind_r = int(my_elbow_r)
-                    midiout.send_message([176, 21, int(NewValue)])
+                    midiout.send_message([176, right_elbow_midi, int(NewValue)])
                     #time.sleep(0.1)
                     #print ("Elbow - ", NewValue)
                     
@@ -141,40 +174,40 @@ with mp_pose.Pose(
                 if abs(tmp_ind_l - int(my_elbow_l)) > 2:
                     NewValue = remap(int(my_elbow_l), 0, 165, 62, 127)
                     tmp_ind_l = int(my_elbow_l)
-                    midiout.send_message([176, 18, int(NewValue)])    
+                    midiout.send_message([176, left_elbow_midi, int(NewValue)])    
                     #time.sleep(0.1)
                     #print ("Elbow - ", NewValue)
             if int(my_elbow_l) < 0 and int(my_elbow_l) > -90:
                 if abs(tmp_ind_l - int(my_elbow_l)) > 2:
                     NewValue = remap(int(my_elbow_l)+90, 0, 90, 31, 61)
                     tmp_ind_l = int(my_elbow_l)
-                    midiout.send_message([176, 18, int(NewValue)])
+                    midiout.send_message([176, left_elbow_midi, int(NewValue)])
                     #time.sleep(0.1)
                     #print ("Elbow - ", NewValue)
             if int(my_elbow_l) < 270 and int(my_elbow_l) > 179:
                 if abs(tmp_ind_l - int(my_elbow_l)) > 2:                
                     NewValue = abs(remap(int(my_elbow_l), 180, 270, 0, 30))
                     tmp_ind_l = int(my_elbow_l)
-                    midiout.send_message([176, 18, int(NewValue)])
+                    midiout.send_message([176, left_elbow_midi, int(NewValue)])
                     #time.sleep(0.1)
                     #print ("Elbow - ", NewValue)
             
             
             
             #right shoulder 
-            if abs(tmp_ind - int(my_shoulder_r)) > 2:
+            if abs(tmp_ind - int(my_shoulder_r)) > 5:
                 NewValue = remap(int(my_shoulder_r)+180, 0, 360, 0, 127)
                 tmp_ind  = int(my_shoulder_r)
-                midiout.send_message([176, 20, int(NewValue)])
+                midiout.send_message([176, right_shoulder_midi, int(NewValue)])
                 #print ("Shoulder right - ", int(NewValue))
                 #time.sleep(0.1)
                 
             #left shoulder 
-            if abs(tmp_ind2 - int(my_shoulder_l)) > 2:
+            if abs(tmp_ind2 - int(my_shoulder_l)) > 5:
                 NewValue = abs(remap(int(my_shoulder_l)+180, 0, 360, 0, 127)-127)
                 
                 tmp_ind2  = int(my_shoulder_l)
-                midiout.send_message([176, 17, int(NewValue)])
+                midiout.send_message([176, left_shoulder_midi, int(NewValue)])
                 #print ("Shoulder left - ", int(NewValue))
                 #time.sleep(0.1)
             
@@ -184,60 +217,75 @@ with mp_pose.Pose(
             if(keypoints[16].get("X") > keypoints[12].get("X")) :
                 if x != 1:
                     x=1
-                    midiout.send_message([0x90, 80, 100])
+                    midiout.send_message([0x90, right_wrist_midi, 100])
                     #print ("Right In")
             else:
                 if x != 2:
                     x=2
-                    midiout.send_message([0x90, 81, 100])
+                    midiout.send_message([0x90, right_wrist_flip_midi, 100])
                     #print ("Right Out")
                     
             #left wrist auto flip
             if(keypoints[15].get("X") > keypoints[11].get("X")) :
                 if x != 1:
                     x=1
-                    midiout.send_message([0x90, 83, 100])
+                    midiout.send_message([0x90, left_wrist_flip_midi, 100])
                     #print ("Left In")
             else:
                 if x != 2:
                     x=2
-                    midiout.send_message([0x90, 82, 100])
+                    midiout.send_message([0x90, left_wrist_midi, 100])
                     #print ("Left Out")
             
+            
             #screen position
-            if abs(tmp_pos-int(keypoints[24].get("X")*100)) > 5:
-                pos_curr = int(keypoints[24].get("X")*100) #/keypoints[23].get("X"))
-                tmp_pos = pos_curr
-                #print(pos_curr)
-                #time.sleep(0.1)
-                #(x, in_min, in_max, out_min, out_max):
-                pos_curr  = remap(pos_curr, 0, 99, 0, 127)
-                midiout.send_message([176, 22, pos_curr])
-                
+            
+            if int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 130 and int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) <= 30 or int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 130 and int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) <= 30:                
+                if abs(tmp_pos-int(keypoints[24].get("X")*100)) > 7:
+                    pos_curr = int(keypoints[24].get("X")*100) #/keypoints[23].get("X"))
+                    ch_rate = changeRate(tmp_pos,pos_curr)
+                    tmp_pos_t = remap(tmp_pos,0,80,0,127)
+                    if ch_rate >= 0:
+                        midiout.send_message([176, screen_position_midi, abs(int(tmp_pos_t+(1)))])
+                        #time.sleep(0.3)
+                        tmp_pos += 1
+                        
+                    else:
+                        midiout.send_message([176, screen_position_midi, abs(int(tmp_pos_t-(1)))])
+                        tmp_pos -= 1
+                        if tmp_pos < 0:
+                            tmp_pos = 0
+
             
             # <3QT face
             if int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) <= 30:
                 if x != 3:
                     x = 3
-                    midiout.send_message([0x90, 84, 100])
-                    print("<3QT")
+                    midiout.send_message([0x90, l3qt_midi, 100])
+                    #print("<3QT")
                     
             # Center Face
             if int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) > 30 and int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) > 30:
                 if x != 4:
                     x = 4
-                    midiout.send_message([0x90, 85, 100])
-                    print("Center")
+                    midiout.send_message([0x90, center_midi, 100])
+                    #print("Center")
                     
             # >3QT face
             if int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) <= 30:
                 if x != 3:
                     x = 3
-                    midiout.send_message([0x90, 84, 100])
-                    print(">3QT")
+                    midiout.send_message([0x90, r3qt_midi, 100])
+                    #print(">3QT")
             
+            if int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 130 and int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) <= 30:
+                midiout.send_message([0x90, right_midi, 100])
+                #print("Right Turn")
+            if int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 130 and int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) <= 30:
+                midiout.send_message([0x90, left_midi, 100])
+                #print("Left Turn")
+                
             
-            #print(int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000))
             
             
             
