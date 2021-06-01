@@ -20,7 +20,7 @@ available_ports = midiout.get_ports()
 #this should be a reference to a loopmidi (number)
 midiout.open_port(1)
 #this should be a reference to your camera (number)
-cam_ref=3
+cam_ref=0
 
 # midi values
 
