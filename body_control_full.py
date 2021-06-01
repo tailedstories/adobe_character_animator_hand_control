@@ -20,7 +20,7 @@ available_ports = midiout.get_ports()
 #this should be a reference to a loopmidi (number)
 midiout.open_port(1)
 #this should be a reference to your camera (number)
-cam_ref=0
+cam_ref=3
 
 # midi values
 
@@ -36,6 +36,8 @@ left_wrist_midi      = 82
 left_wrist_flip_midi = 83
 #Screen Position (walking behavior px)
 screen_position_midi = 22
+#Screen Position Standing (x)
+main_position_midi   = 23
 
 #<3QT face note
 l3qt_midi = 84
@@ -241,6 +243,7 @@ with mp_pose.Pose(
             #screen position
             
             if int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 130 and int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) <= 30 or int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 130 and int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) <= 30:                
+                midiout.send_message([0x90, main_position_midi, 0])
                 if abs(tmp_pos-int(keypoints[24].get("X")*100)) > 7:
                     pos_curr = int(keypoints[24].get("X")*100) #/keypoints[23].get("X"))
                     ch_rate = changeRate(tmp_pos,pos_curr)
@@ -255,8 +258,11 @@ with mp_pose.Pose(
                         tmp_pos -= 1
                         if tmp_pos < 0:
                             tmp_pos = 0
-
-            
+                    walking_position_swap = tmp_pos
+            else:
+                if x != 5:
+                    midiout.send_message([0x90, main_position_midi, walking_position_swap])
+                    x = 5
             # <3QT face
             if int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) <= 30:
                 if x != 3:
