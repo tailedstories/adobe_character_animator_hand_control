@@ -42,7 +42,7 @@ main_position_midi   = 23
 #<3QT face note
 l3qt_midi = 84
 #Front face note
-center_midi = 85
+center_midi = 89
 #>3QT face note
 r3qt_midi = 86
 
@@ -50,6 +50,8 @@ r3qt_midi = 86
 right_midi = 87
 # Left turn
 left_midi = 88
+# Front turn
+front_midi = 89
 
 def changeRate(x1,x2):
     if x1 == 0 or x2 == 0:
@@ -95,6 +97,11 @@ tmp_ind_r= 0
 tmp_ind_l= 0
 tmp_pos  = 0
 pos_curr = 0
+x_pos = 0
+x_rot = 0
+x_face=0
+x_pos_s=0
+walking_position_swap = 0
 with mp_pose.Pose(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5) as pose:
@@ -242,12 +249,19 @@ with mp_pose.Pose(
             
             #screen position
             
-            if int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 130 and int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) <= 30 or int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 130 and int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) <= 30:                
-                midiout.send_message([0x90, main_position_midi, 0])
+            tmp_pos_t = remap(tmp_pos,0,80,0,100)
+            
+            if int(keypoints[4].get("X")*1000-keypoints[8].get("X")*1000) <= 20 and int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 150 or int(keypoints[1].get("X")*1000 - keypoints[7].get("X")*1000) >= 0 and int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 150:
+                if x_pos != 6:
+                    
+                    
+                    x_pos = 6
+                    
+                
                 if abs(tmp_pos-int(keypoints[24].get("X")*100)) > 7:
                     pos_curr = int(keypoints[24].get("X")*100) #/keypoints[23].get("X"))
                     ch_rate = changeRate(tmp_pos,pos_curr)
-                    tmp_pos_t = remap(tmp_pos,0,80,0,127)
+                    
                     if ch_rate >= 0:
                         midiout.send_message([176, screen_position_midi, abs(int(tmp_pos_t+(1)))])
                         #time.sleep(0.3)
@@ -258,41 +272,70 @@ with mp_pose.Pose(
                         tmp_pos -= 1
                         if tmp_pos < 0:
                             tmp_pos = 0
-                    walking_position_swap = tmp_pos
-            else:
-                if x != 5:
-                    midiout.send_message([0x90, main_position_midi, walking_position_swap])
-                    x = 5
-            # <3QT face
-            if int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) <= 30:
-                if x != 3:
-                    x = 3
-                    midiout.send_message([0x90, l3qt_midi, 100])
-                    #print("<3QT")
+                walking_position_swap = tmp_pos_t+1
+            elif int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) > 150:
+                if x_pos != 5:
+                    midiout.send_message([176, screen_position_midi, 0])
+                    time.sleep(0.05)
+                    midiout.send_message([0x90, front_midi, 100])
+                    time.sleep(0.05)
+                    midiout.send_message([176, main_position_midi, abs(walking_position_swap)])
+                    time.sleep(1)
+                    x_pos = 5
                     
-            # Center Face
-            if int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) > 30 and int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) > 30:
-                if x != 4:
-                    x = 4
-                    midiout.send_message([0x90, center_midi, 100])
-                    #print("Center")
-                    
-            # >3QT face
-            if int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) <= 30:
-                if x != 3:
-                    x = 3
-                    midiout.send_message([0x90, r3qt_midi, 100])
-                    #print(">3QT")
             
-            if int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 130 and int(keypoints[4].get("X")*1000 - keypoints[8].get("X")*1000) <= 30:
-                midiout.send_message([0x90, right_midi, 100])
-                #print("Right Turn")
-            if int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) < 130 and int(keypoints[7].get("X")*1000 - keypoints[1].get("X")*1000) <= 30:
-                midiout.send_message([0x90, left_midi, 100])
-                #print("Left Turn")
+            # Center Face
+            if int(keypoints[4].get("X")*1000-keypoints[8].get("X")*1000) > 20 and int(keypoints[1].get("X")*1000 - keypoints[7].get("X")*1000) < 0 and int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) > 150:
+                if x_face != 4:
+                    if x_face == 3:
+                        midiout.send_message([0x90, r3qt_midi, 100])
+                    if x_face == 7:
+                        midiout.send_message([0x90, l3qt_midi, 100])
+                    midiout.send_message([0x90, center_midi, 100])
+                    x_face = 4
+                    print("Center")
+            
+            #Right turn
+            elif int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) <= 150 and int(keypoints[4].get("X")*1000-keypoints[8].get("X")*1000) <= 20:
+                if x_face != 6:
+                    x_face = 6
+                    midiout.send_message([0x90, right_midi, 100])
+                    print("Right Turn")
+            #Left turn
+            elif int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) <= 150 and int(keypoints[1].get("X")*1000 - keypoints[7].get("X")*1000) >= -10:
+                if x_face != 8:
+                    x_face = 8
+                    midiout.send_message([176, main_position_midi, 0])
+                    time.sleep(0.05)
+                    midiout.send_message([0x90, left_midi, 100])
+                    time.sleep(0.05)
+                    midiout.send_message([176, screen_position_midi, walking_position_swap])
+                    print("Left Turn")
+            
+            # >3QT face
+            elif int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) > 150 and int(keypoints[4].get("X")*1000-keypoints[8].get("X")*1000) <= 20:
+                if x_face != 3:
+                    x_face = 3
+                    midiout.send_message([0x90, r3qt_midi, 100])
+                    print(">3QT")
+                    
+            # <3QT face
+            elif int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000) > 150 and int(keypoints[1].get("X")*1000 - keypoints[7].get("X")*1000) >= 0:
+                if x_face != 7:
+                    x_face = 7
+                    midiout.send_message([0x90, l3qt_midi, 100])
+                    #print(int(keypoints[1].get("X")*1000 - keypoints[7].get("X")*1000))
+                    print("<3QT")
+            #else:
+            #    if x_face != 8:
+            #        x_face = 8
+                    #midiout.send_message([0x90, center_midi, 100])
                 
             
-            
+                
+            print("1 = ", int(keypoints[1].get("X")*1000 - keypoints[7].get("X")*1000))
+            print("2 = ", int(keypoints[11].get("X")*1000 - keypoints[12].get("X")*1000))
+            #print("3 = ", int(keypoints[4].get("X")*1000-keypoints[8].get("X")*1000))
             
             
     if cv2.waitKey(5) & 0xFF == 27:
