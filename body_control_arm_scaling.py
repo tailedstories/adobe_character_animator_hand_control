@@ -2,7 +2,8 @@ import cv2
 import mediapipe as mp
 import rtmidi
 import math
-
+import csv
+from datetime import datetime
 
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic = mp.solutions.holistic
@@ -19,7 +20,8 @@ available_ports = midiout.get_ports()
 #this should be a reference to a loopmidi (number)
 midiout.open_port(1)
 #this should be a reference to your camera (number)
-cam_ref=3
+#cam_ref=3
+cam_ref="arm_move_f_2.mp4"
 
 # midi values
 
@@ -93,8 +95,9 @@ def myAngle(cx, cy, ex, ey):
   return round(theta)
 
 
-
-
+empty_json=[]
+for i in range(21):
+    empty_json.append("{'X': 0.0, 'Y': 0.0, 'Z': 0.0, 'Visibility': 0.0}")
 
 
 
@@ -117,7 +120,7 @@ with mp_holistic.Holistic(
 
     # Flip the image horizontally for a later selfie-view display, and convert
     # the BGR image to RGB.
-    image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # To improve performance, optionally mark the image as not writeable to
     # pass by reference.
     image.flags.writeable = False
@@ -142,21 +145,37 @@ with mp_holistic.Holistic(
         keypoints = []
         for data_point in results.right_hand_landmarks.landmark:
             keypoints.append({
-                                 'X': data_point.x,
-                                 'Y': data_point.y,
-                                 'Z': data_point.z,
-                                 'Visibility': data_point.visibility,
+                                 "X": data_point.x,
+                                 "Y": data_point.y,
+                                 "Z": data_point.z,
+                                 "Visibility": data_point.visibility,
                                  })
     
     if results.pose_landmarks != None:
         keypoints_body = []
         for data_point in results.pose_landmarks.landmark:
             keypoints_body.append({
-                                 'X': data_point.x,
-                                 'Y': data_point.y,
-                                 'Z': data_point.z,
-                                 'Visibility': data_point.visibility,
+                                 "X": data_point.x,
+                                 "Y": data_point.y,
+                                 "Z": data_point.z,
+                                 "Visibility": data_point.visibility,
                                  })
+    
+    # Save the Data Points
+    if results.right_hand_landmarks != None and results.pose_landmarks != None:
+        #Column 33 end keypoints_body
+        with open('points.csv', 'a', newline='') as csvfile:
+            spamwriter = csv.writer(csvfile, delimiter=',')
+            spamwriter.writerow([datetime.now(tz=None)] + keypoints_body + keypoints)
+        #with open('points_hands.csv', 'a', newline='') as csvfile:
+        #    spamwriter = csv.writer(csvfile, delimiter=',')
+        #    spamwriter.writerow(keypoints)
+    if results.pose_landmarks != None:
+        #Column 33 end keypoints_body
+        with open('points.csv', 'a', newline='') as csvfile:
+            spamwriter = csv.writer(csvfile, delimiter=',')
+            spamwriter.writerow([datetime.now(tz=None)] + keypoints_body + empty_json)
+    
     
     # Near Wrist
     if results.right_hand_landmarks != None and results.pose_landmarks != None:
