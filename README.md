@@ -6,6 +6,8 @@ File "joints_to_midi.py" can take saved joints and calculate midi values for joi
 
 File "midi_player.py" can take saved midi values and play them (e.g. to control Charanter in Adobe Character Animator)
 
+File "webcam_and_midi_realtime.py" is the most buggy. Can transmit joints to Character Animator in real time for broadcasts
+
 
 This repository uses google MediaPipe to recognize the arms on the camera and use them to control character in Adobe Character Animator.
 
