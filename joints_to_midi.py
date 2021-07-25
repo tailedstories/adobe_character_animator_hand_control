@@ -47,12 +47,14 @@ NearElbow=None
 
 
 dist_max = 0
-dist_min = 0
+dist_min = 99999
+dist_max_should = 0
+dist_min_should = 99999
 
 my_arr_NearElbow = []
 my_arr_NearShoulder = []
 my_arr_NearShoulderInside = []
-my_arr_NearShoulderScaling = []
+my_arr_NearElbowScaling = []
 my_arr_NearWrist = []
 my_arr_NearWristSwitch = []
 
@@ -73,6 +75,7 @@ i_dt=0
 with open('points.csv', newline='') as csvfile:
      spamreader = csv.reader(csvfile, delimiter=',')
      for row in spamreader:
+         my_n_shoulder = json.loads(row[13].replace("'",'"'))
          my_n_elbow = json.loads(row[15].replace("'",'"'))
          my_n_wrist = json.loads(row[17].replace("'",'"'))
 
@@ -85,6 +88,14 @@ with open('points.csv', newline='') as csvfile:
              dist_max = dist
          if dist < dist_min:
              dist_min = dist
+             
+         my_x = abs(my_n_elbow.get("X")-my_n_shoulder.get("X"))*1000
+         my_y = abs(my_n_elbow.get("Y")-my_n_shoulder.get("Y"))*1000
+         dist = math.hypot(my_x, my_y)
+         if dist > dist_max_should:
+             dist_max_should = dist
+         if dist < dist_min_should:
+             dist_min_should = dist
 
 #adjust distance min/max threshhold
 dist_max -= 60
@@ -147,7 +158,7 @@ with open('points.csv', newline='') as csvfile:
              my_shoulder_r = remap(int(my_shoulder_r), 0, 360, 0, 127)
              
              #########################
-             # Near Shoulder Scaling #
+             # Near Elbow Scaling    #
              #########################
              
              my_x = abs(my_n_wrist.get("X")-my_n_elbow.get("X"))*1000
@@ -157,17 +168,35 @@ with open('points.csv', newline='') as csvfile:
                  dist = dist_max
              if dist < dist_min:
                  dist = dist_min
+             my_n_elbow_scale_values = int(remap(int(dist), dist_min, dist_max, 0, 127))
+             if my_n_elbow_scale_values >= 119:
+                 my_n_elbow_scale_values = 127
+             if my_n_elbow_scale_values < 0:
+                 my_n_elbow_scale_values = 0
+             
+             #########################
+             # Near Shoulder Scaling #
+             #########################
+             
+             my_x = abs(my_n_elbow.get("X")-my_n_shoulder.get("X"))*1000
+             my_y = abs(my_n_elbow.get("Y")-my_n_shoulder.get("Y"))*1000
+             dist = math.hypot(my_x, my_y)
+             if dist > dist_max_should:
+                 dist = dist_max_should
+             if dist < dist_min_should:
+                 dist = dist_min_should
              my_n_shoulder_scale_values = int(remap(int(dist), dist_min, dist_max, 0, 127))
              if my_n_shoulder_scale_values >= 120:
                  my_n_shoulder_scale_values = 127
+             if my_n_shoulder_scale_values < 0:
+                 my_n_shoulder_scale_values = 0
              
-                
              ##################
              # Display Joints #
              ##################
              
              #set to false to disablle player
-             if True:
+             if False:
                  #Prepare Green Screen
                  image = np.zeros((my_height,my_width,3), np.uint8)
                  image[:] = [0,255,0]
@@ -189,7 +218,7 @@ with open('points.csv', newline='') as csvfile:
                  # near | Midi value -- Elbow
                  image = cv2.putText(image, str(int(round(NearElbow,0))), (int(my_width*my_n_elbow.get("X")), int(my_height*my_n_elbow.get("Y"))), cv2.FONT_HERSHEY_DUPLEX, 1.3, (50,0,255), 2, cv2.LINE_AA)
                  # near | Midi value -- Shoulder Scaling
-                 image = cv2.putText(image, "Elbow Dist: " + str(my_n_shoulder_scale_values), (10,100), cv2.FONT_HERSHEY_DUPLEX, 1.3, (50,0,255), 2, cv2.LINE_AA)
+                 image = cv2.putText(image, "Elbow Dist: " + str(my_n_elbow_scale_values), (10,100), cv2.FONT_HERSHEY_DUPLEX, 1.3, (50,0,255), 2, cv2.LINE_AA)
                  image = cv2.putText(image, "Shoulder Dist: " + str(my_n_shoulder_scale_values), (600,100), cv2.FONT_HERSHEY_DUPLEX, 1.3, (50,0,255), 2, cv2.LINE_AA)
                  
                  # show image
@@ -211,9 +240,10 @@ with open('points.csv', newline='') as csvfile:
              # update arrays with results for further processing
              my_arr_NearElbow.append(NearElbow)
              my_arr_NearShoulder.append(int(my_shoulder_r))
-             my_arr_NearShoulderScaling.append(int(my_n_shoulder_scale_values)) #dist
+             my_arr_NearElbowScaling.append(int(my_n_elbow_scale_values)) #dist
+             my_arr_NearElbowScaling.append(int(my_n_shoulder_scale_values)) #dist
              my_arr_NearWrist.append(int(NearWrist))             
-             sl_arr.append(row[0])
+             sl_arr.append(row[55])
 
 
 ##########################################
@@ -221,7 +251,7 @@ with open('points.csv', newline='') as csvfile:
 ##########################################
 
 # Smooth Scalling Values
-my_arr_NearShoulderScaling_s = gaussian_filter1d(my_arr_NearShoulderScaling, sigma=8)
+my_arr_NearShoulderScaling_s = gaussian_filter1d(my_arr_NearElbowScaling, sigma=8)
 
 # Loop over the smoothed scaled values
 for i in range(len(my_arr_NearShoulderScaling_s)):
@@ -253,13 +283,11 @@ if False:
 #################################
 
 #smoothing
-my_arr_NearShoulderScaling = gaussian_filter1d(my_arr_NearShoulderScaling, sigma=8)
+my_arr_NearElbowScaling = gaussian_filter1d(my_arr_NearElbowScaling, sigma=8)
 #ensure top scaled is snapped all the way
 for i in range(len(my_arr_NearShoulderScaling_s)):
-    if my_arr_NearShoulderScaling[i] > 120:
-        my_arr_NearShoulderScaling[i]=127
-
-
+    if my_arr_NearElbowScaling[i] > 120:
+        my_arr_NearElbowScaling[i] = 127
 
 
 ####################################
@@ -344,7 +372,7 @@ for x in range(len(my_arr_NearElbow)):
 #plt.plot(my_arr_NearWristSwitch)
 
 # Elbow Scalling
-#plt.plot(my_arr_NearShoulderScaling)
+#plt.plot(my_arr_NearElbowScaling)
 
 # Inside zone wrist flip
 #plt.plot(my_arr_NearShoulderInside)
@@ -362,7 +390,7 @@ with open('elbow.csv', 'w', newline='') as csvfile:
                                          int(my_arr_NearElbow[x]),
                                          my_arr_NearShoulder[x],
                                          my_arr_NearWristSwitch[x],
-                                         my_arr_NearShoulderScaling[x],
+                                         my_arr_NearElbowScaling[x],
                                          my_arr_NearShoulderInside[x]
                                        ])
                     
