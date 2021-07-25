@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+  <div class="container">
+  <h2 id="leftarm">Looking for a Wrist...</h2>
+  <h2 id="coord">Looking for a Wrist...</h2>
+  <h3 id="wrist">Looking for a Wrist...</h3>
+    <video class="input_video" style="visibility:hidden" height="7px"></video>
+    <canvas class="output_canvas" width="1280px" height="960px"></canvas>
+  </div>
+</body>
+</html>
+
+<script type="module">
+const videoElement = document.getElementsByClassName('input_video')[0];
+const canvasElement = document.getElementsByClassName('output_canvas')[0];
+const canvasCtx = canvasElement.getContext('2d');
+
+
+function setText( text ) {
+	document.getElementById( "rightarm" ).innerText = text;
+}
+function setThumb( text ) {
+	document.getElementById( "leftarm" ).innerText = text;
+}
+function setCoord( text ) {
+	document.getElementById( "coord" ).innerText = text;
+}
+function setWrist( text ) {
+	document.getElementById( "wrist" ).innerText = text;
+}
+
+function angle(cx, cy, ex, ey) {
+  var dy = ey - cy;
+  var dx = ex - cx;
+  var theta = Math.atan2(dy, dx); // range (-PI, PI]
+  theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
+  //if (theta < 0) theta = 360 + theta; // range [0, 360)
+  return Math.round(theta);
+}
+
+function onResults(results) {
+  canvasCtx.save();
+  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+  canvasCtx.drawImage(
+      results.image, 0, 0, canvasElement.width, canvasElement.height);
+  drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
+                 {color: '#00FF00', lineWidth: 4});
+  drawLandmarks(canvasCtx, results.poseLandmarks,
+                {color: '#FF0000', lineWidth: 2});
+  if(results.poseLandmarks[16].x > results.poseLandmarks[12].x) {
+    setThumb("Right In");
+  } else {
+    setThumb("Right Out");
+  }
+  //if(results.poseLandmarks[15].x < results.poseLandmarks[11].x) {
+  //  setText("Left In");
+  //} else {
+  //  setText("Left Out");
+  //}
+  setCoord(angle(results.poseLandmarks[12].x,results.poseLandmarks[12].y,results.poseLandmarks[14].x,results.poseLandmarks[14].y));
+  //setWrist(angle(results.poseLandmarks[14].x,results.poseLandmarks[14].y,results.poseLandmarks[16].x,results.poseLandmarks[16].y));
+  var a1 = parseFloat(angle(results.poseLandmarks[12].x,results.poseLandmarks[12].y,results.poseLandmarks[14].x,results.poseLandmarks[14].y));
+  var a2 = parseFloat(angle(results.poseLandmarks[14].x,results.poseLandmarks[14].y,results.poseLandmarks[16].x,results.poseLandmarks[16].y));
+  var sign = a1 > a2 ? 1 : -1;
+  //if (a1 < 0) {
+	//a1=a1*(-1);
+  //}
+  var myangle = a1 - a2;
+  var K = -sign * Math.PI * 2;
+  var myangle = (Math.abs(K + myangle) < Math.abs(myangle))? K + myangle : myangle;
+  setWrist(Math.round(myangle));
+  
+   //150 		- elbow folded inside
+   //0 -90 		- elbow outside
+   //270-180	- elbow outside
+  canvasCtx.restore();
+}
+
+
+const pose = new Pose({locateFile: (file) => {
+  return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+}});
+pose.setOptions({
+  modelComplexity: 1,
+  smoothLandmarks: true,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+pose.onResults(onResults);
+
+const camera = new Camera(videoElement, {
+  onFrame: async () => {
+    await pose.send({image: videoElement});
+  },
+  width: 1280,
+  height: 960
+});
+camera.start();
+</script>

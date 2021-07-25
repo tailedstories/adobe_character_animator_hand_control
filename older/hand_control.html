@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="jquery.js"></script> 
+ 
+  
+</head>
+
+<body>
+  <h1 id="status">Loading...</h1>
+  <h2 id="thumb">Looking for a Wrist...</h2>
+  <h2 id="coord">Looking for a Wrist...</h2>
+  <div class="container">
+    <video class="input_video" style="visibility:hidden" height="7px"></video>
+    <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+  </div>
+
+</body>
+
+<script type="module">
+const videoElement = document.getElementsByClassName('input_video')[0];
+const canvasElement = document.getElementsByClassName('output_canvas')[0];
+const canvasCtx = canvasElement.getContext('2d');
+
+function setText( text ) {
+	document.getElementById( "status" ).innerText = text;
+}
+function setThumb( text ) {
+	document.getElementById( "thumb" ).innerText = text;
+}
+function setCoord( text ) {
+	document.getElementById( "coord" ).innerText = text;
+}
+
+		
+function onResults(results) {
+  canvasCtx.save();
+  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+  canvasCtx.drawImage(
+      results.image, 0, 0, canvasElement.width, canvasElement.height);
+  if (results.multiHandLandmarks) {
+    for (const landmarks of results.multiHandLandmarks) {
+      drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
+                     {color: '#00FF00', lineWidth: 5});
+      drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
+	  setText ( "X: " + landmarks[0].x.toPrecision(2) + "    Y: " + landmarks[0].y.toPrecision(2) );
+	  setCoord( "Thumb - X: " + landmarks[4].x.toPrecision(2) + "    Y: " + landmarks[4].y.toPrecision(2) );
+	  
+	  if (landmarks[0].x > landmarks[4].x) {
+		setThumb( "Left");
+	  }else{
+		setThumb( "Right");
+	  }
+    }
+  }
+  canvasCtx.restore();
+}
+
+const hands = new Hands({locateFile: (file) => {
+  return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+}});
+hands.setOptions({
+  maxNumHands: 1,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.6
+});
+hands.onResults(onResults);
+
+const camera = new Camera(videoElement, {
+  onFrame: async () => {
+    await hands.send({image: videoElement});
+  },
+  width: 1280,
+  height: 720
+});
+camera.start();
+</script>
