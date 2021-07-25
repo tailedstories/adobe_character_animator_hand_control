@@ -9,7 +9,9 @@ File "midi_player.py" can take saved midi values and play them (e.g. to control 
 
 This repository uses google MediaPipe to recognize the arms on the camera and use them to control character in Adobe Character Animator.
 
+
 Video description here: https://youtu.be/9mfgDAPNEck
+
 Newer one here: https://youtu.be/iaBhmATup84
 
 # References
