@@ -16,6 +16,8 @@ Video description here: https://youtu.be/9mfgDAPNEck
 
 Newer one here: https://youtu.be/iaBhmATup84
 
+Whole playlist: https://www.youtube.com/playlist?list=PLCrX5fPUJBDz3Hh1IPm_L0gHzFiPqH-0J
+
 # References
 
 1) Original Mediapipe project  https://google.github.io/mediapipe/
