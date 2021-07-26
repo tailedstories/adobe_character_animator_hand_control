@@ -16,6 +16,8 @@ Video description here: https://youtu.be/9mfgDAPNEck
 
 Newer one here: https://youtu.be/iaBhmATup84
 
+Newest video: https://youtu.be/9KYP8UVVCpE
+
 Whole playlist: https://www.youtube.com/playlist?list=PLCrX5fPUJBDz3Hh1IPm_L0gHzFiPqH-0J
 
 # References
