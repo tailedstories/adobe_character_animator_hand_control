@@ -159,8 +159,9 @@ with open('points.csv', newline='') as csvfile:
 
 #adjust distance min/max threshhold
 dist_max -= 60
-dist_min += 80
+#dist_min += 80
 
+dist_max_should -= 60
 #print("Dist min - ", dist_min)
 #print("Dist max - ", dist_max)
 
@@ -251,7 +252,7 @@ with open('points.csv', newline='') as csvfile:
                  dist = dist_max_should
              if dist < dist_min_should:
                  dist = dist_min_should
-             my_n_shoulder_scale_values = int(remap(int(dist), dist_min, dist_max, 0, 127))
+             my_n_shoulder_scale_values = int(remap(int(dist), dist_min_should, dist_max_should, 0, 127))
              if my_n_shoulder_scale_values >= 120:
                  my_n_shoulder_scale_values = 127
              if my_n_shoulder_scale_values < 0:
@@ -344,7 +345,7 @@ with open('points.csv', newline='') as csvfile:
                      # near | hip --> shoulder
                      cv2.line(image, (int(my_width*my_n_shoulder.get("X")), int(my_height*my_n_shoulder.get("Y"))), (int(my_width*my_n_hip.get("X")), int(my_height*my_n_hip.get("Y"))), (255,55,150),5)
                      
-                     cv2.line(image, (int(my_width*my_n_elbow.get("X")), int(my_height*my_n_elbow.get("Y"))), (int(my_width*my_n_hip.get("X")), int(my_height*my_n_hip.get("Y"))), (0,0,255),2)
+                     #cv2.line(image, (int(my_width*my_n_elbow.get("X")), int(my_height*my_n_elbow.get("Y"))), (int(my_width*my_n_hip.get("X")), int(my_height*my_n_hip.get("Y"))), (0,0,255),2)
                  
                  # Draw Far Arm
                  if True:    
@@ -356,7 +357,7 @@ with open('points.csv', newline='') as csvfile:
                      # near | hip --> shoulder
                      cv2.line(image, (int(my_width*my_f_shoulder.get("X")), int(my_height*my_f_shoulder.get("Y"))), (int(my_width*my_f_hip.get("X")), int(my_height*my_f_hip.get("Y"))), (255,55,150),5)
                      
-                     cv2.line(image, (int(my_width*my_f_elbow.get("X")), int(my_height*my_f_elbow.get("Y"))), (int(my_width*my_f_hip.get("X")), int(my_height*my_f_hip.get("Y"))), (0,0,255),2)   
+                     #cv2.line(image, (int(my_width*my_f_elbow.get("X")), int(my_height*my_f_elbow.get("Y"))), (int(my_width*my_f_hip.get("X")), int(my_height*my_f_hip.get("Y"))), (0,0,255),2)   
                  
                  # Draw Midi Values
                  # near
