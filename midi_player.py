@@ -98,6 +98,14 @@ def myAngle(cx, cy, ex, ey):
   bearing = (degrees(angle) + 360) % 360
   return bearing 
 
+def myAngleRad(cx, cy, ex, ey):
+  angle = atan2(cos(cx)*sin(ex)-sin(cx) * cos(ex)*cos(ey-cy), sin(ey-cy)*cos(ex))
+  return angle
+
+def rotate(cx, cy, ex, ey, angle):
+    qx = cx + math.cos(angle) * (ex - cx) - math.sin(angle) * (ey - cy)
+    qy = cy + math.sin(angle) * (ex - cx) + math.cos(angle) * (ey - cy)
+    return qx, qy
 
 ##################
 # Init variables #
@@ -234,8 +242,11 @@ with open('points.csv', newline='') as csvfile:
              ##############
              # Near elbow #
              ##############
-                
-             my_elbow_n = myAngle(my_n_elbow.get("X"),my_n_elbow.get("Y"),my_n_wrist.get("X"),my_n_wrist.get("Y"))
+             
+             my_elbow_tmp = myAngleRad(my_n_shoulder.get("X"),my_n_shoulder.get("Y"),my_n_elbow.get("X"),my_n_elbow.get("Y"))
+             rot_my_elbow_n = rotate(my_n_elbow.get("X"),my_n_elbow.get("Y"),my_n_wrist.get("X"),my_n_wrist.get("Y"), my_elbow_tmp)
+             my_elbow_n = myAngle(my_n_elbow.get("X"),my_n_elbow.get("Y"),rot_my_elbow_n[0],rot_my_elbow_n[1])
+             #my_elbow_n = myAngle(my_n_elbow.get("X"),my_n_elbow.get("Y"),my_n_wrist.get("X"),my_n_wrist.get("Y"))
              NearElbow = int(remap(int(my_elbow_n), 0, 360, 0, 127))
              
              #################
@@ -410,7 +421,7 @@ with open('points.csv', newline='') as csvfile:
                  
                  # Send MIDI
                  if send_midi_bool:
-                     my_delay = 0.005
+                     my_delay = 0.002
                      
                      ################
                      ## Midi Notes ##
@@ -428,25 +439,25 @@ with open('points.csv', newline='') as csvfile:
                      
                      
                      # Near | Elbow - knob
-                     if abs(my_arr_NearWrist[-1] - NearElbow) > 4:
+                     if abs(my_arr_NearWrist[-1] - NearElbow) > 2:
                          midiout.send_message([176, near_elbow_midi, NearElbow])
-                         time.sleep(my_delay)
+                         #time.sleep(my_delay)
                      # Near | Elbow Scaling - knob
                      if abs(my_arr_NearElbowScaling[-1] - my_n_elbow_scale_values) > 4:
                          midiout.send_message([176, near_elbow_scaling_midi, my_n_elbow_scale_values])
-                         time.sleep(my_delay)
+                     #    time.sleep(my_delay)
                      # Near | Shoulder - knob
-                     if abs(my_arr_NearShoulder[-1] - my_shoulder_n):
+                     if abs(my_arr_NearShoulder[-1] - my_shoulder_n) > 2:
                          midiout.send_message([176, near_shoulder_midi, my_shoulder_n])
                          time.sleep(my_delay)
                      # Near | Shoulder Scaling - knob
-                     if near_elbow_flip_status == 1 and abs(my_arr_NearShoulderScaling[-1] - my_n_shoulder_scale_values) > 4:
-                         midiout.send_message([176, near_shoulder_scaling_midi, my_n_shoulder_scale_values])
-                         time.sleep(my_delay)
+                     #if near_elbow_flip_status == 1 and abs(my_arr_NearShoulderScaling[-1] - my_n_shoulder_scale_values) > 4:
+                     #    midiout.send_message([176, near_shoulder_scaling_midi, my_n_shoulder_scale_values])
+                     #    time.sleep(my_delay)
                      # Near | Wrist - knob
-                     if abs(my_arr_NearWrist[-1] - NearWrist) > 4:
-                         midiout.send_message([176, near_wrist_midi, NearWrist])
-                         time.sleep(my_delay)
+                     #if abs(my_arr_NearWrist[-1] - NearWrist) > 2:
+                     #    midiout.send_message([176, near_wrist_midi, NearWrist])
+                     #    time.sleep(my_delay)
                      # Near | Wrist Center Flip
                      if near_shoulder_scaling_midi < 30 and near_elbow_flip_status != 1:
                          midiout.send_message([0x90, center_wrist_near, 100])
