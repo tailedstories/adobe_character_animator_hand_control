@@ -22,49 +22,67 @@ my_height = 960
 my_width  = 1280
 
 # send midi while playing
-send_midi_bool = False
+send_midi_bool = True
+# display joints
+display_bool = True
 
-
-###############
-# MIDI Values #
-###############
-
-far_shoulder_scaling_midi = 11
-far_shoulder_midi   = 17
-far_elbow_midi      = 18
-far_wrist_midi      = 80
-far_wrist_flip_midi = 81
-far_elbow_scaling_midi = 10
-#center
-center_wrist_far = 7
-#Left Arm
-near_shoulder_midi   = 16
-near_elbow_midi      = 21
-near_wrist_midi      = 19
-near_wrist_flip_midi = 83
-
-near_elbow_scaling_midi = 10    # wrong ref
-near_shoulder_scaling_midi = 10 # wrong ref
-
-#Screen Position (walking behavior px)
-screen_position_midi = 22
-#Screen Position Standing (x)
-main_position_midi   = 23
-
-#<3QT face note
-l3qt_midi = 84
-#Front face note
-center_midi = 89
-#>3QT face note
-r3qt_midi = 86
-
-# Right turn
-right_midi = 87
-# Left turn
-left_midi = 88
-# Front turn
-front_midi = 89
-
+            ###############
+           ## MIDI Values ##
+#####################################\
+# Far                               ##
+######################################
+# Far | Shoulder                     #
+far_shoulder_midi = 70               #
+# Far | Shoulder Scaling             #
+far_shoulder_scaling_midi = 71       #
+# Far | Elbow                        #
+far_elbow_midi = 72                  #
+# Far | Elbow Scaling                #
+far_elbow_scaling_midi = 73          #
+# Far | Wrist                        #
+far_wrist_midi = 74                  #
+# Far | Center Flip                  #
+center_wrist_far = 75                #
+# Far | Buttons ←↑→↓                 #
+far_wrist_flip_midi = [76,77,78]     #
+#####################################\
+# Near                              ##
+######################################
+# Near | Shoulder                    #
+near_shoulder_midi   = 60            #
+# Near | Shoulder Scaling            #
+near_shoulder_scaling_midi = 61      #
+# Near | Elbow                       #
+near_elbow_midi      = 62            #
+# Near | Elbow Scaling               #
+near_elbow_scaling_midi = 63         #
+# Near | Wrist                       #
+near_wrist_midi      = 64            #
+# Near | Center Flip                 #
+center_wrist_near = 65               #
+# Near | Buttons ←↑→↓                #
+near_wrist_flip_midi = [66,67,68]   ##
+#####################################\
+# Position                          ##
+######################################
+#Screen Position(walking behavior px)#
+screen_position_midi = 22            #
+#Screen Position Standing (x)        #
+main_position_midi   = 23            #
+#####################################\
+# Character Turn                    ##
+######################################
+# Front turn                         #
+front_midi = 80                      #
+#<3QT face note                      #
+l3qt_midi = 81                       #
+#>3QT face note                      #
+r3qt_midi = 82                       #
+# Right turn                         #
+right_midi = 83                      #
+# Left turn                          #
+left_midi = 84                       #
+#####################################/
 
 ###################
 # Functions Setup #
@@ -102,23 +120,26 @@ dist_min = 99999
 dist_max_should = 0
 dist_min_should = 99999
 
-my_arr_NearElbow = []
-my_arr_NearShoulder = []
-my_arr_NearShoulderInside = []
-my_arr_NearShoulderScaling = []
-my_arr_NearElbowScaling = []
-my_arr_NearWrist = []
-my_arr_NearWristSwitch = []
+my_arr_NearElbow = [0]
+my_arr_NearShoulder = [0]
+my_arr_NearShoulderInside = [0]
+my_arr_NearShoulderScaling = [0]
+my_arr_NearElbowScaling = [0]
+my_arr_NearWrist = [0]
+my_arr_NearWristSwitch = [0]
 
-my_arr_FarElbow = []
-my_arr_FarShoulder = []
-my_arr_FarShoulderInside = []
-my_arr_FarShoulderScaling = []
-my_arr_FarElbowScaling = []
-my_arr_FarWrist = []
+my_arr_FarElbow = [0]
+my_arr_FarShoulder = [0]
+my_arr_FarShoulderInside = [0]
+my_arr_FarShoulderScaling = [0]
+my_arr_FarElbowScaling = [0]
+my_arr_FarWrist = [0]
 
 
-sl_arr = []
+near_elbow_flip_status = 3
+far_elbow_flip_status = 0
+
+sl_arr = [0]
 sl = 0
 
 New_val_old = 0
@@ -325,8 +346,8 @@ with open('points.csv', newline='') as csvfile:
              # Display Joints #
              ##################
              
-             #set to false to disablle player
-             if True:
+             #set to false to disable player
+             if display_bool:
                  #Prepare Green Screen
                  image = np.zeros((my_height,my_width,3), np.uint8)
                  image[:] = [0,255,0]
@@ -389,29 +410,138 @@ with open('points.csv', newline='') as csvfile:
                  
                  # Send MIDI
                  if send_midi_bool:
-                     my_delay = 0.001
+                     my_delay = 0.005
                      
                      ################
                      ## Midi Notes ##
-                     ################
-                     ## button press
-                     ## --> midiout.send_message([0x90, midi_ref, 100])
-                     ## knob value send
-                     ## --> midiout.send_message([176, midi_ref, midi_value])
-                     ################
+        #########################################################
+        ## button press                                         #
+        ## --> midiout.send_message([0x90, midi_ref, 100])      #
+        ## knob value send                                      #
+        ## --> midiout.send_message([176, midi_ref, midi_value])#
+        #########################################################
                      
-                     midiout.send_message([176, near_elbow_midi, NearElbow])
-                     time.sleep(my_delay)
-                     midiout.send_message([176, near_shoulder_midi, my_shoulder_n])
-                     time.sleep(my_delay)
-                     midiout.send_message([176, near_elbow_scaling_midi, my_n_elbow_scale_values])
-                     time.sleep(my_delay)
-                     midiout.send_message([176, near_shoulder_scaling_midi, my_n_shoulder_scale_values])
-                     time.sleep(my_delay)
-                     midiout.send_message([176, near_wrist_midi, NearWrist])
-                     time.sleep(my_delay)
                      
+                     ######################
+                     ## Near - Midi Send ##
+                     ######################
+                     
+                     
+                     # Near | Elbow - knob
+                     if abs(my_arr_NearWrist[-1] - NearElbow) > 4:
+                         midiout.send_message([176, near_elbow_midi, NearElbow])
+                         time.sleep(my_delay)
+                     # Near | Elbow Scaling - knob
+                     if abs(my_arr_NearElbowScaling[-1] - my_n_elbow_scale_values) > 4:
+                         midiout.send_message([176, near_elbow_scaling_midi, my_n_elbow_scale_values])
+                         time.sleep(my_delay)
+                     # Near | Shoulder - knob
+                     if abs(my_arr_NearShoulder[-1] - my_shoulder_n):
+                         midiout.send_message([176, near_shoulder_midi, my_shoulder_n])
+                         time.sleep(my_delay)
+                     # Near | Shoulder Scaling - knob
+                     if near_elbow_flip_status == 1 and abs(my_arr_NearShoulderScaling[-1] - my_n_shoulder_scale_values) > 4:
+                         midiout.send_message([176, near_shoulder_scaling_midi, my_n_shoulder_scale_values])
+                         time.sleep(my_delay)
+                     # Near | Wrist - knob
+                     if abs(my_arr_NearWrist[-1] - NearWrist) > 4:
+                         midiout.send_message([176, near_wrist_midi, NearWrist])
+                         time.sleep(my_delay)
+                     # Near | Wrist Center Flip
+                     if near_shoulder_scaling_midi < 30 and near_elbow_flip_status != 1:
+                         midiout.send_message([0x90, center_wrist_near, 100])
+                         near_elbow_flip_status = 1
+                     elif near_shoulder_scaling_midi >= 30 and near_elbow_flip_status != 2:
+                         midiout.send_message([0x90, center_wrist_near, 100])
+                         near_elbow_flip_status = 2
+                     # Near | Wrist Switch Buttons
+                     # Near | ←
+                     if NearElbow < 32 and near_elbow_flip_status != 1:
+                         time.sleep(my_delay)
+                         midiout.send_message([0x90, near_wrist_flip_midi[0], 100])
+                         near_elbow_flip_status = 1
+                     # Near | →
+                     elif NearElbow < 64 and near_elbow_flip_status != 2:
+                         time.sleep(my_delay)
+                         midiout.send_message([0x90, near_wrist_flip_midi[2], 100])
+                         near_elbow_flip_status = 2
+                     # Near | ↓
+                     elif NearElbow < 96 and near_elbow_flip_status != 3:
+                         time.sleep(my_delay)
+                         if near_elbow_flip_status == 1:
+                             tmp_send = near_wrist_flip_midi[0]
+                         elif near_elbow_flip_status == 2:
+                             tmp_send = near_wrist_flip_midi[2]
+                         elif near_elbow_flip_status == 4:
+                             tmp_send = near_wrist_flip_midi[1]
 
+                         midiout.send_message([0x90, tmp_send, 100])
+                         near_elbow_flip_status = 3
+                     # Near | ↑
+                     elif near_elbow_flip_status != 4:
+                         time.sleep(my_delay)
+                         midiout.send_message([0x90, near_wrist_flip_midi[1], 100])
+                         near_elbow_flip_status = 4
+                    
+                    
+                     #####################
+                     ## Far - Midi Send ##
+                     #####################
+                     if False:
+                         # Far | Wrist - knob
+                         if abs(my_arr_FarWrist[-1] - FarWrist) > 4:
+                             midiout.send_message([176, far_wrist_midi, FarWrist])
+                             time.sleep(my_delay)
+                         # Far | Elbow - knob
+                         midiout.send_message([176, far_elbow_midi, FarElbow])
+                         time.sleep(my_delay)
+                         # Far | Elbow Scaling - knob
+                         midiout.send_message([176, far_elbow_scaling_midi, my_f_elbow_scale_values])
+                         time.sleep(my_delay)
+                         # Far | Shoulder - knob
+                         midiout.send_message([176, far_shoulder_midi, my_shoulder_f])
+                         time.sleep(my_delay)
+                         # Far | Shoulder Scaling - knob
+                         if far_elbow_flip_status == 1:
+                             midiout.send_message([176, far_shoulder_scaling_midi, my_f_shoulder_scale_values])
+                         # Far | Wrist Center Flip
+                         if far_shoulder_scaling_midi < 30 and far_elbow_flip_status != 1:
+                             midiout.send_message([0x90, center_wrist_far, 100])
+                             far_elbow_flip_status = 1
+                         elif far_elbow_flip_status != 2:
+                             midiout.send_message([0x90, center_wrist_far, 100])
+                             far_elbow_flip_status = 2
+                         # Far | Wrist Switch Buttons
+                         # Far | ←
+                         if FarElbow < 32 and far_elbow_flip_status != 1:
+                             time.sleep(my_delay)
+                             midiout.send_message([0x90, far_wrist_flip_midi[0], 100])
+                             far_elbow_flip_status = 1
+                         # Far | →
+                         elif FarElbow < 64 and far_elbow_flip_status != 2:
+                             time.sleep(my_delay)
+                             midiout.send_message([0x90, far_wrist_flip_midi[2], 100])
+                             far_elbow_flip_status = 2
+                         # Far | ↓
+                         elif FarElbow < 96 and far_elbow_flip_status != 3:
+                             time.sleep(my_delay)
+                             if far_elbow_flip_status == 1:
+                                 tmp_send = far_wrist_flip_midi[0]
+                             elif far_elbow_flip_status == 2:
+                                 tmp_send = far_wrist_flip_midi[2]
+                             elif far_elbow_flip_status == 4:
+                                 tmp_send = far_wrist_flip_midi[1]
+    
+                             midiout.send_message([0x90, tmp_send, 100])
+                             far_elbow_flip_status = 3
+                         # Far | ↑
+                         elif far_elbow_flip_status != 4:
+                             time.sleep(my_delay)
+                             midiout.send_message([0x90, far_wrist_flip_midi[1], 100])
+                             far_elbow_flip_status = 4
+                     
+                     
+                     
                      
                  
                  #Quit on ESC
@@ -423,7 +553,11 @@ with open('points.csv', newline='') as csvfile:
                      #sl =  (datetime.fromisoformat(row[0]) - i_dt).total_seconds() 
                      #time.sleep(sl)
                      #print((float(row[55]) - i_dt)/1000)
+                     sleep_time = ((float(row[55]) - i_dt) / 1000) - my_delay
+                     if sleep_time < 0:
+                         sleep_time = 0
                      time.sleep((float(row[55]) - i_dt) / 1000)
+                     #print(sleep_time)
                  #i_dt = datetime.fromisoformat(row[0])
                  i_dt = float(row[55])
                  
@@ -563,7 +697,7 @@ for x in range(len(my_arr_NearElbow)):
 #plt.plot(my_arr_NearWrist)
 
 # Elbow Rotation
-#plt.plot(my_arr_NearElbow)
+plt.plot(my_arr_NearElbow)
 
 # Shoulder Rotation
 #plt.plot(my_arr_NearShoulder)
@@ -572,10 +706,10 @@ for x in range(len(my_arr_NearElbow)):
 #plt.plot(my_arr_NearWristSwitch)
 
 # Elbow Scalling
-plt.plot(my_arr_NearElbowScaling)
+#plt.plot(my_arr_NearElbowScaling)
 
 # Inside zone wrist flip
-plt.plot(my_arr_NearShoulderInside)
+#plt.plot(my_arr_NearShoulderInside)
 
 
 
@@ -595,7 +729,8 @@ with open('elbow.csv', 'w', newline='') as csvfile:
                                        ])
                     
 
-            
+if send_midi_bool:            
+    midiout.close_port()
 
 
 
