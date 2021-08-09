@@ -23,8 +23,8 @@ mp_holistic = mp.solutions.holistic
 
 #this should be a reference to your camera (number)
 #               or a video reference (file)
-cam_ref=2
-#cam_ref="arm_move_f_2.mp4"
+#cam_ref=3
+cam_ref="arm_move_f_2.mp4"
 
 send_midi_bool = True
 
@@ -175,8 +175,8 @@ with mp_holistic.Holistic(
     success, image = cap.read()
     if not success:
       # Stop when video done
-      #break
-      continue
+      break
+      #continue
     # Flip the image horizontally for a later selfie-view display, and convert
     # the BGR image to RGB.
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

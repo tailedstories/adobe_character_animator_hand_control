@@ -158,7 +158,8 @@ my_arr_FarWrist = [0]
 
 near_elbow_flip_status_b = 2
 near_elbow_flip_status = 3
-far_elbow_flip_status = 0
+far_elbow_flip_status_b = 2
+far_elbow_flip_status = 3
 
 sl_arr = [0]
 sl = 0
@@ -434,7 +435,7 @@ with open('points.csv', newline='') as csvfile:
                  
                  # Send MIDI
                  if send_midi_bool:
-                     my_delay = 0.002
+                     my_delay = 0.01
                      
                      ################
                      ## Midi Notes ##
@@ -454,14 +455,14 @@ with open('points.csv', newline='') as csvfile:
                      # Near | Elbow - knob
                      if abs(my_arr_NearWrist[-1] - NearElbow) > 2:
                          midiout.send_message([176, near_elbow_midi, NearElbow])
-                         #time.sleep(my_delay)
+                         time.sleep(my_delay)
                      # Near | Elbow Scaling - knob
                      #if abs(my_arr_NearElbowScaling[-1] - my_n_elbow_scale_values) > 4:
                          #midiout.send_message([176, near_elbow_scaling_midi, my_n_elbow_scale_values])
                      #    time.sleep(my_delay)
                      # Near | Shoulder - knob
                      if abs(my_arr_NearShoulder[-1] - my_shoulder_n) > 1:
-                         #time.sleep(my_delay)
+                         time.sleep(my_delay)
                          midiout.send_message([176, near_shoulder_midi, my_shoulder_n])
                      # Near | Shoulder Scaling - knob
                      #if near_elbow_flip_status == 1 and abs(my_arr_NearShoulderScaling[-1] - my_n_shoulder_scale_values) > 4:
@@ -484,12 +485,13 @@ with open('points.csv', newline='') as csvfile:
                      # Near | ↓ | Down sideways
                      if near_elbow_flip_status_b != 1:
                          if NearElbow >= down_arm_midi_top and near_elbow_flip_status != 1 or NearElbow < down_arm_midi_bottom and near_elbow_flip_status != 1:
-                             midiout.send_message([0x90, near_wrist_flip_midi[2], 100])
-                             print("down - ", NearElbow)
-                             near_elbow_flip_status = 1
                              time.sleep(my_delay)
+                             midiout.send_message([0x90, near_wrist_flip_midi[2], 100])
+                             #print("down - ", NearElbow)
+                             near_elbow_flip_status = 1
                          # Near | ← | Left Out
                          elif NearElbow < down_arm_midi_top and NearElbow >= up_arm_midi and near_elbow_flip_status != 3:
+                             time.sleep(my_delay)                             
                              if near_elbow_flip_status == 1:
                                  tmp_send = near_wrist_flip_midi[2]
                              elif near_elbow_flip_status == 2:
@@ -499,78 +501,87 @@ with open('points.csv', newline='') as csvfile:
                     
                              #midiout.send_message([0x90, tmp_send, 100])
                              midiout.send_message([0x90, near_wrist_flip_midi[3], 100])
-                             print("out - ", NearElbow)
+                             #print("out - ", NearElbow)
                              near_elbow_flip_status = 3
-                             time.sleep(my_delay)
                          # Near | ↑ | Up sideways
                          elif NearElbow < up_arm_midi and NearElbow >= right_arm_midi and near_elbow_flip_status != 4:
-                             midiout.send_message([0x90, near_wrist_flip_midi[0], 100])
-                             print("up - ", NearElbow)
-                             near_elbow_flip_status = 4 
                              time.sleep(my_delay)
+                             midiout.send_message([0x90, near_wrist_flip_midi[0], 100])
+                             #print("up - ", NearElbow)
+                             near_elbow_flip_status = 4 
                          # Near | → | Right In
                          elif NearElbow < right_arm_midi and NearElbow >= down_arm_midi_bottom and near_elbow_flip_status != 2:
-                             midiout.send_message([0x90, near_wrist_flip_midi[1], 100])
-                             print("in - ", NearElbow)
-                             near_elbow_flip_status = 2
                              time.sleep(my_delay)
+                             midiout.send_message([0x90, near_wrist_flip_midi[1], 100])
+                             #print("in - ", NearElbow)
+                             near_elbow_flip_status = 2
                      
                      #####################
                      ## Far - Midi Send ##
                      #####################
-                     if False:
-                         # Far | Wrist - knob
-                         if abs(my_arr_FarWrist[-1] - FarWrist) > 4:
-                             midiout.send_message([176, far_wrist_midi, FarWrist])
-                             time.sleep(my_delay)
-                         # Far | Elbow - knob
+                     # Far | Elbow - knob
+                     if abs(my_arr_FarWrist[-1] - FarElbow) > 2:
                          midiout.send_message([176, far_elbow_midi, FarElbow])
                          time.sleep(my_delay)
-                         # Far | Elbow Scaling - knob
-                         midiout.send_message([176, far_elbow_scaling_midi, my_f_elbow_scale_values])
+                     # Far | Elbow Scaling - knob
+                     #if abs(my_arr_FarElbowScaling[-1] - my_f_elbow_scale_values) > 4:
+                         #midiout.send_message([176, far_elbow_scaling_midi, my_f_elbow_scale_values])
+                     #    time.sleep(my_delay)
+                     # Far | Shoulder - knob
+                     if abs(my_arr_FarShoulder[-1] - my_shoulder_f) > 1:
                          time.sleep(my_delay)
-                         # Far | Shoulder - knob
                          midiout.send_message([176, far_shoulder_midi, my_shoulder_f])
+                     # Far | Shoulder Scaling - knob
+                     #if far_elbow_flip_status == 1 and abs(my_arr_FarShoulderScaling[-1] - my_f_shoulder_scale_values) > 4:
+                     #    time.sleep(my_delay)
+                     #    midiout.send_message([176, far_shoulder_scaling_midi, my_f_shoulder_scale_values])
+                     # Far | Wrist - knob
+                     #if abs(my_arr_FarWrist[-1] - FarWrist) > 2:
+                     #    midiout.send_message([176, far_wrist_midi, FarWrist])
+                     #    time.sleep(my_delay)
+                     # Far | Wrist Center Flip
+                     if my_f_elbow_scale_values < 30 and far_elbow_flip_status_b != 1:
                          time.sleep(my_delay)
-                         # Far | Shoulder Scaling - knob
-                         if far_elbow_flip_status == 1:
-                             midiout.send_message([176, far_shoulder_scaling_midi, my_f_shoulder_scale_values])
-                         # Far | Wrist Center Flip
-                         if far_shoulder_scaling_midi < 30 and far_elbow_flip_status != 1:
-                             midiout.send_message([0x90, center_wrist_far, 100])
-                             far_elbow_flip_status = 1
-                         elif far_elbow_flip_status != 2:
-                             midiout.send_message([0x90, center_wrist_far, 100])
-                             far_elbow_flip_status = 2
-                         # Far | Wrist Switch Buttons
-                         # Far | ←
-                         if FarElbow < 32 and far_elbow_flip_status != 1:
-                             time.sleep(my_delay)
-                             midiout.send_message([0x90, far_wrist_flip_midi[0], 100])
-                             far_elbow_flip_status = 1
-                         # Far | →
-                         elif FarElbow < 64 and far_elbow_flip_status != 2:
+                         midiout.send_message([0x90, center_wrist_far, 100])
+                         far_elbow_flip_status_b = 1
+                     elif my_f_elbow_scale_values >= 30 and far_elbow_flip_status_b != 2:
+                         time.sleep(my_delay)
+                         midiout.send_message([0x90, center_wrist_far, 100])
+                         far_elbow_flip_status_b = 2
+                     # Far | Wrist Switch Buttons      
+                     # Far | ↓ | Down sideways
+                     if far_elbow_flip_status_b != 1:
+                         if FarElbow >= down_arm_midi_top and far_elbow_flip_status != 1 or FarElbow < down_arm_midi_bottom and far_elbow_flip_status != 1:
                              time.sleep(my_delay)
                              midiout.send_message([0x90, far_wrist_flip_midi[2], 100])
-                             far_elbow_flip_status = 2
-                         # Far | ↓
-                         elif FarElbow < 96 and far_elbow_flip_status != 3:
-                             time.sleep(my_delay)
+                             #print("down - ", FarElbow)
+                             far_elbow_flip_status = 1
+                         # Far | → | Right Out
+                         elif NearElbow < right_arm_midi and NearElbow >= down_arm_midi_bottom and near_elbow_flip_status != 2:
+                             time.sleep(my_delay)                             
                              if far_elbow_flip_status == 1:
-                                 tmp_send = far_wrist_flip_midi[0]
-                             elif far_elbow_flip_status == 2:
                                  tmp_send = far_wrist_flip_midi[2]
-                             elif far_elbow_flip_status == 4:
+                             elif near_elbow_flip_status == 2:
                                  tmp_send = far_wrist_flip_midi[1]
-    
-                             midiout.send_message([0x90, tmp_send, 100])
+                             elif far_elbow_flip_status == 4:
+                                 tmp_send = far_wrist_flip_midi[0]
+                    
+                             #midiout.send_message([0x90, tmp_send, 100])
+                             midiout.send_message([0x90, far_wrist_flip_midi[3], 100])
+                             #print("out - ", FarElbow)
                              far_elbow_flip_status = 3
-                         # Far | ↑
-                         elif far_elbow_flip_status != 4:
+                         # Far | ↑ | Up sideways
+                         elif FarElbow < up_arm_midi and FarElbow >= right_arm_midi and far_elbow_flip_status != 4:
+                             time.sleep(my_delay)
+                             midiout.send_message([0x90, far_wrist_flip_midi[0], 100])
+                             #print("up - ", FarElbow)
+                             far_elbow_flip_status = 4 
+                         # Far | ← | Left In
+                         elif FarElbow < down_arm_midi_top and FarElbow >= up_arm_midi and far_elbow_flip_status != 3:
                              time.sleep(my_delay)
                              midiout.send_message([0x90, far_wrist_flip_midi[1], 100])
-                             far_elbow_flip_status = 4
-                     
+                             #print("in - ", FarElbow)
+                             far_elbow_flip_status = 2
                      
                      
                      
