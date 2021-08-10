@@ -23,8 +23,8 @@ mp_holistic = mp.solutions.holistic
 
 #this should be a reference to your camera (number)
 #               or a video reference (file)
-#cam_ref=3
-cam_ref="arm_move_f_2.mp4"
+cam_ref=3
+#cam_ref="arm_move_f_2.mp4"
 
 send_midi_bool = True
 
@@ -122,6 +122,13 @@ my_arr_NearShoulderScaling = [0]
 
 near_elbow_flip_status = 3
 near_elbow_flip_status_b = 2
+
+my_arr_FarWrist = [0]
+my_arr_FarShoulder = [0]
+my_arr_FarShoulderScaling = [0]
+
+far_elbow_flip_status = 3
+far_elbow_flip_status_b = 2
 
 ###################
 # Functions Setup #
@@ -266,7 +273,7 @@ with mp_holistic.Holistic(
             spamwriter = csv.writer(csvfile, delimiter=',')
             spamwriter.writerow([datetime.now(tz=None)] + keypoints_body + empty_json + [calc_timestamps[-1]])
     
-    if results.right_hand_landmarks != None and results.pose_landmarks != None:
+    if results.left_hand_landmarks != None and results.right_hand_landmarks != None and results.pose_landmarks != None:
         ######################
         ## Near - Midi Send ##
         ######################
@@ -281,7 +288,7 @@ with mp_holistic.Holistic(
         my_f_shoulder = keypoints_body[11]
         my_f_elbow = keypoints_body[13]
         my_f_wrist = keypoints_body[15]
-        #my_f_h_wrist = keypoints_wrist_far[12] 
+        my_f_h_wrist = keypoints_wrist_far[12] 
         
         
         ##############
@@ -349,6 +356,69 @@ with mp_holistic.Holistic(
         if my_n_shoulder_scale_values < 0:
             my_n_shoulder_scale_values = 0
         
+        
+        #############
+        # Far Wrist #
+        #############
+        
+        NewValue = myAngle(my_f_wrist.get("X"),my_f_wrist.get("Y"),my_f_h_wrist.get("X"),my_f_h_wrist.get("Y"))
+        
+        if my_f_h_wrist.get("X") != 0 or my_f_h_wrist.get("Y") != 0:
+            if NewValue < 0:
+                NewValue = 0
+            if NewValue > 110:
+                NewValue = 110        
+            FarWrist = int(remap(int(NewValue), 0, 110, 0, 127))
+        else:
+            FarWrist = my_arr_FarWrist[-1]
+        
+        #############
+        # Far elbow #
+        #############
+           
+        my_elbow_f = myAngle(my_f_elbow.get("X"),my_f_elbow.get("Y"),my_f_wrist.get("X"),my_f_wrist.get("Y"))
+        FarElbow = int(remap(int(my_elbow_f), 0, 360, 0, 127))
+        
+        ################
+        # Far shoulder #
+        ################
+        
+        my_shoulder_f = myAngle(my_f_shoulder.get("X"),my_f_shoulder.get("Y"),my_f_elbow.get("X"),my_f_elbow.get("Y"))
+        my_shoulder_f = remap(int(my_shoulder_f), 0, 360, 0, 127)
+        
+        ########################
+        # Far Elbow Scaling    #
+        ########################
+        
+        my_x = abs(my_f_wrist.get("X")-my_f_elbow.get("X"))*1000
+        my_y = abs(my_f_wrist.get("Y")-my_f_elbow.get("Y"))*1000
+        dist = math.hypot(my_x, my_y)
+        if dist > dist_max:
+            dist = dist_max
+        if dist < dist_min:
+            dist = dist_min
+        my_f_elbow_scale_values = int(remap(int(dist), dist_min, dist_max, 0, 127))
+        if my_f_elbow_scale_values >= 119:
+            my_f_elbow_scale_values = 127
+        if my_f_elbow_scale_values < 0:
+            my_f_elbow_scale_values = 0
+        
+        ########################
+        # Far Shoulder Scaling #
+        ########################
+        
+        my_x = abs(my_f_elbow.get("X")-my_f_shoulder.get("X"))*1000
+        my_y = abs(my_f_elbow.get("Y")-my_f_shoulder.get("Y"))*1000
+        dist = math.hypot(my_x, my_y)
+        if dist > dist_max_should:
+            dist = dist_max_should
+        if dist < dist_min_should:
+            dist = dist_min_should
+        my_f_shoulder_scale_values = int(remap(int(dist), dist_min, dist_max, 0, 127))
+        if my_f_shoulder_scale_values >= 120:
+            my_f_shoulder_scale_values = 127
+        if my_f_shoulder_scale_values < 0:
+            my_f_shoulder_scale_values = 0
         
         if send_midi_bool:
             my_delay = 0.01
@@ -432,7 +502,69 @@ with mp_holistic.Holistic(
             ## Far - Midi Send ##
             #####################
             #if False:
-                
+            # Far | Elbow - knob
+            if abs(my_arr_FarWrist[-1] - FarElbow) > 2:
+                midiout.send_message([176, far_elbow_midi, FarElbow])
+                time.sleep(my_delay)
+            # Far | Elbow Scaling - knob
+            #if abs(my_arr_FarElbowScaling[-1] - my_f_elbow_scale_values) > 4:
+                #midiout.send_message([176, far_elbow_scaling_midi, my_f_elbow_scale_values])
+            #    time.sleep(my_delay)
+            # Far | Shoulder - knob
+            if abs(my_arr_FarShoulder[-1] - my_shoulder_f) > 1:
+                time.sleep(my_delay)
+                midiout.send_message([176, far_shoulder_midi, my_shoulder_f])
+            # Far | Shoulder Scaling - knob
+            #if far_elbow_flip_status == 1 and abs(my_arr_FarShoulderScaling[-1] - my_f_shoulder_scale_values) > 4:
+            #    time.sleep(my_delay)
+            #    midiout.send_message([176, far_shoulder_scaling_midi, my_f_shoulder_scale_values])
+            # Far | Wrist - knob
+            #if abs(my_arr_FarWrist[-1] - FarWrist) > 2:
+            #    midiout.send_message([176, far_wrist_midi, FarWrist])
+            #    time.sleep(my_delay)
+            # Far | Wrist Center Flip
+            if my_f_elbow_scale_values < 30 and far_elbow_flip_status_b != 1:
+                time.sleep(my_delay)
+                midiout.send_message([0x90, center_wrist_far, 100])
+                far_elbow_flip_status_b = 1
+            elif my_f_elbow_scale_values >= 30 and far_elbow_flip_status_b != 2:
+                time.sleep(my_delay)
+                midiout.send_message([0x90, center_wrist_far, 100])
+                far_elbow_flip_status_b = 2
+            # Far | Wrist Switch Buttons      
+            # Far | ↓ | Down sideways
+            if far_elbow_flip_status_b != 1:
+                if FarElbow >= down_arm_midi_top and far_elbow_flip_status != 1 or FarElbow < down_arm_midi_bottom and far_elbow_flip_status != 1:
+                    time.sleep(my_delay)
+                    midiout.send_message([0x90, far_wrist_flip_midi[2], 100])
+                    #print("down - ", FarElbow)
+                    far_elbow_flip_status = 1
+                # Far | ← | Left Out
+                elif FarElbow < down_arm_midi_top and FarElbow >= up_arm_midi and far_elbow_flip_status != 3:
+                    time.sleep(my_delay)                             
+                    if far_elbow_flip_status == 1:
+                        tmp_send = far_wrist_flip_midi[2]
+                    elif far_elbow_flip_status == 2:
+                        tmp_send = far_wrist_flip_midi[1]
+                    elif far_elbow_flip_status == 4:
+                        tmp_send = far_wrist_flip_midi[0]
+           
+                    #midiout.send_message([0x90, tmp_send, 100])
+                    midiout.send_message([0x90, far_wrist_flip_midi[3], 100])
+                    #print("out - ", NearElbow)
+                    far_elbow_flip_status = 3
+                # Far | ↑ | Up sideways
+                elif FarElbow < up_arm_midi and FarElbow >= right_arm_midi and far_elbow_flip_status != 4:
+                    time.sleep(my_delay)
+                    midiout.send_message([0x90, far_wrist_flip_midi[0], 100])
+                    #print("up - ", FarElbow)
+                    far_elbow_flip_status = 4 
+                # Far | → | Right In
+                elif FarElbow < right_arm_midi and FarElbow >= down_arm_midi_bottom and far_elbow_flip_status != 2:
+                    time.sleep(my_delay)
+                    midiout.send_message([0x90, far_wrist_flip_midi[1], 100])
+                    #print("in - ", FarElbow)
+                    far_elbow_flip_status = 2    
                              
             
     
