@@ -23,7 +23,7 @@ mp_holistic = mp.solutions.holistic
 
 #this should be a reference to your camera (number)
 #               or a video reference (file)
-cam_ref=3
+cam_ref=1
 #cam_ref="arm_move_f_2.mp4"
 
 send_midi_bool = True
@@ -468,7 +468,7 @@ with mp_holistic.Holistic(
             if near_elbow_flip_status_b != 1:
                 if NearElbow >= down_arm_midi_top and near_elbow_flip_status != 1 or NearElbow < down_arm_midi_bottom and near_elbow_flip_status != 1:
                     midiout.send_message([0x90, near_wrist_flip_midi[2], 100])
-                    print("down - ", NearElbow)
+                    #print("down - ", NearElbow)
                     near_elbow_flip_status = 1
                     time.sleep(my_delay)
                 # Near | ← | Left Out
@@ -482,19 +482,19 @@ with mp_holistic.Holistic(
            
                     #midiout.send_message([0x90, tmp_send, 100])
                     midiout.send_message([0x90, near_wrist_flip_midi[3], 100])
-                    print("out - ", NearElbow)
+                    #print("out - ", NearElbow)
                     near_elbow_flip_status = 3
                     time.sleep(my_delay)
                 # Near | ↑ | Up sideways
                 elif NearElbow < up_arm_midi and NearElbow >= right_arm_midi and near_elbow_flip_status != 4:
                     midiout.send_message([0x90, near_wrist_flip_midi[0], 100])
-                    print("up - ", NearElbow)
+                    #print("up - ", NearElbow)
                     near_elbow_flip_status = 4 
                     time.sleep(my_delay)
                 # Near | → | Right In
                 elif NearElbow < right_arm_midi and NearElbow >= down_arm_midi_bottom and near_elbow_flip_status != 2:
                     midiout.send_message([0x90, near_wrist_flip_midi[1], 100])
-                    print("in - ", NearElbow)
+                    #print("in - ", NearElbow)
                     near_elbow_flip_status = 2
                     time.sleep(my_delay)
            
@@ -542,15 +542,7 @@ with mp_holistic.Holistic(
                 # Far | ← | Left Out
                 elif FarElbow < down_arm_midi_top and FarElbow >= up_arm_midi and far_elbow_flip_status != 3:
                     time.sleep(my_delay)                             
-                    if far_elbow_flip_status == 1:
-                        tmp_send = far_wrist_flip_midi[2]
-                    elif far_elbow_flip_status == 2:
-                        tmp_send = far_wrist_flip_midi[1]
-                    elif far_elbow_flip_status == 4:
-                        tmp_send = far_wrist_flip_midi[0]
-           
-                    #midiout.send_message([0x90, tmp_send, 100])
-                    midiout.send_message([0x90, far_wrist_flip_midi[3], 100])
+                    midiout.send_message([0x90, far_wrist_flip_midi[1], 100])
                     #print("out - ", NearElbow)
                     far_elbow_flip_status = 3
                 # Far | ↑ | Up sideways
@@ -562,9 +554,9 @@ with mp_holistic.Holistic(
                 # Far | → | Right In
                 elif FarElbow < right_arm_midi and FarElbow >= down_arm_midi_bottom and far_elbow_flip_status != 2:
                     time.sleep(my_delay)
-                    midiout.send_message([0x90, far_wrist_flip_midi[1], 100])
+                    midiout.send_message([0x90, far_wrist_flip_midi[3], 100])
                     #print("in - ", FarElbow)
-                    far_elbow_flip_status = 2    
+                    far_elbow_flip_status = 2
                              
             
     

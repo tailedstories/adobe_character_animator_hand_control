@@ -559,15 +559,7 @@ with open('points.csv', newline='') as csvfile:
                          # Far | ← | Left Out
                          elif FarElbow < down_arm_midi_top and FarElbow >= up_arm_midi and far_elbow_flip_status != 3:
                              time.sleep(my_delay)                             
-                             if far_elbow_flip_status == 1:
-                                 tmp_send = far_wrist_flip_midi[2]
-                             elif far_elbow_flip_status == 2:
-                                 tmp_send = far_wrist_flip_midi[1]
-                             elif far_elbow_flip_status == 4:
-                                 tmp_send = far_wrist_flip_midi[0]
-                    
-                             #midiout.send_message([0x90, tmp_send, 100])
-                             midiout.send_message([0x90, far_wrist_flip_midi[3], 100])
+                             midiout.send_message([0x90, far_wrist_flip_midi[1], 100])
                              #print("out - ", NearElbow)
                              far_elbow_flip_status = 3
                          # Far | ↑ | Up sideways
@@ -579,7 +571,7 @@ with open('points.csv', newline='') as csvfile:
                          # Far | → | Right In
                          elif FarElbow < right_arm_midi and FarElbow >= down_arm_midi_bottom and far_elbow_flip_status != 2:
                              time.sleep(my_delay)
-                             midiout.send_message([0x90, far_wrist_flip_midi[1], 100])
+                             midiout.send_message([0x90, far_wrist_flip_midi[3], 100])
                              #print("in - ", FarElbow)
                              far_elbow_flip_status = 2
                      
