@@ -1,0 +1,2 @@
+ControlSend("Adobe Character Animator 2021","","[CLASS:DroverLord - Window Class; INSTANCE:4]","^r")
+;~ ControlClick("Adobe Character Animator 2021","","[CLASS:DroverLord - Window Class; INSTANCE:4]","left",3,34, 49)
