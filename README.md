@@ -8,6 +8,7 @@ File "midi_player.py" can take saved midi values and play them (e.g. to control 
 
 File "webcam_and_midi_realtime.py" is the most buggy. Can transmit joints to Character Animator in real time for broadcasts
 
+File "IK_solve_arm_position_wheel.py" can solve arm position for circular movement (automated arm position for any character or wheel size)
 
 This repository uses google MediaPipe to recognize the arms on the camera and use them to control character in Adobe Character Animator.
 
