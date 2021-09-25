@@ -21,7 +21,7 @@ from datetime import datetime
 
 # clockwise   --> true
 # couterclock --> false
-clockwise = False
+clockwise = True
 
 # True will send midi signal for character animator
 # False will not
@@ -29,7 +29,7 @@ sendmidi = False
 
 # Set to false to not play animation on graph
 # just record joints to file
-animated_graph = True
+animated_graph = False
 
 # the ranges to change gpaph size
 graph_X_min = -100
@@ -96,6 +96,7 @@ if sendmidi:
 pts = np.stack((rr, cc), axis=-1)
 origin = [40, 20]
 refvec = [0, 1]
+milliseconds_start = 0
 
 ########################################
 # Clean up existing files to Save MIDI #
@@ -242,8 +243,10 @@ def IK(target, angle, link, max_iter = 10000, err_min = 0.1,myind=1):
 # Run animation when clicked on the graph
 def onclick(event):
     # import global values 
-    global target, r_arm, angle, link2, angle2, ax,rr,cc
+    global target, r_arm, angle, link2, angle2, ax,rr,cc,milliseconds_start
     
+    # set record starting time
+    milliseconds_start = int(round(time.time() * 1000))
     ######################################
     # Loop Over all points in the circle #
     ######################################
@@ -434,11 +437,14 @@ def onclick(event):
         # Save Joints MIDI Data for Replay #
         ####################################
         with open('wheel_points.csv', 'a', newline='') as csvfile:
-            spamwriter = csv.writer(csvfile, delimiter=',')
-            spamwriter.writerow([datetime.now(tz=None)] + [ind, my_r_shoulder, my_r_elbow, my_l_shoulder, my_l_elbow])
             
+            spamwriter = csv.writer(csvfile, delimiter=',')
+            spamwriter.writerow([int(round(time.time() * 1000))-milliseconds_start,
+                                 my_r_shoulder, my_r_elbow, 
+                                 my_l_shoulder, my_l_elbow])
+            milliseconds_start = int(round(time.time() * 1000))    
         
-        
+            
         
         
         
