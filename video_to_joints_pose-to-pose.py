@@ -23,10 +23,10 @@ mp_holistic = mp.solutions.holistic
 
 #this should be a reference to your camera (number)
 #               or a video reference (file)
-cam_ref=4
-#cam_ref="arm_move_f_2.mp4"
+#cam_ref=3
+cam_ref="front_flip_2_4k.mp4"
 
-send_midi_bool = True
+send_midi_bool = False
 
 
             ###############
@@ -85,6 +85,12 @@ r3qt_midi = 82                       #
 right_midi = 83                      #
 # Left turn                          #
 left_midi = 84                       #
+# back <3QT face note                #
+back_l3qt_midi = 85                  #
+# back >3QT face note                #
+back_r3qt_midi = 86                  #
+# Backt turn                         #
+back_midi = 87                       #
 #####################################/
 ##  Threshholds                     ##
 ######################################
@@ -559,8 +565,8 @@ with mp_holistic.Holistic(
                     midiout.send_message([0x90, far_wrist_flip_midi[3], 100])
                     #print("in - ", FarElbow)
                     far_elbow_flip_status = 2
-                             
-        time.sleep(1.0)
+        
+        #time.sleep(1.0)
     
     
     
