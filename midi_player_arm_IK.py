@@ -50,6 +50,12 @@ far_wrist_midi = 74                  #
 center_wrist_far = 75                #
 # Far | Buttons ↑→↓                  #
 far_wrist_flip_midi = [78,77,76,79]  #
+# Far | Hip                          #
+far_hip_midi = 50                    #
+# Far | Knee                         #
+far_knee_midi = 51                   #
+# Far | Foot                         #
+far_foot_midi = 52                   #
 #####################################\
 # Near                              ##
 ######################################
@@ -67,6 +73,12 @@ near_wrist_midi      = 64            #
 center_wrist_near = 65               #
 # Near | Buttons ↑→↓                 #
 near_wrist_flip_midi = [68,67,66,69]##
+# Near | Hip                         #
+near_hip_midi = 53                   #
+# Near | Knee                        #
+near_knee_midi = 54                  #
+# Near | Foot                        #
+near_foot_midi = 55                  #
 #####################################\
 # Position                          ##
 ######################################
@@ -87,6 +99,9 @@ r3qt_midi = 82                       #
 right_midi = 83                      #
 # Left turn                          #
 left_midi = 84                       #
+######################################
+# Rotation                           #
+my_body_rot_midi = 85                #
 #####################################/
 ##  Threshholds                     ##
 ######################################
@@ -109,8 +124,9 @@ i=0
 
 
 # midi order to send
-midi_store = [far_shoulder_midi , far_elbow_midi, 
-              near_shoulder_midi, near_elbow_midi]
+midi_store = [near_elbow_midi,near_shoulder_midi,far_elbow_midi,far_shoulder_midi,near_hip_midi,near_knee_midi,far_hip_midi,far_knee_midi,my_body_rot_midi]
+
+#midi_store = [far_shoulder_midi]
 
     
 for column in range(len(midi_store)):
@@ -118,7 +134,7 @@ for column in range(len(midi_store)):
     
     # skip first frame time delay
     #i=0
-    input("Press Enter to continue...")
+    input("Enable Midi... " + str(midi_store[column]))
     
     
     if enable_recording:
@@ -128,12 +144,13 @@ for column in range(len(midi_store)):
             time.sleep(5)
         
     # loop over the file with saved midi values
-    with open('wheel_points.csv', newline='') as csvfile:
+    with open('frontflip.csv', newline='') as csvfile:
          # loop over the columns
          # read csv file
          spamreader = csv.reader(csvfile, delimiter=',')     
          print(column)
          # get rows from the file
+         time_memba = 0
          for row in spamreader:
              # check if row is not empty
              #if len(row) > 0:
@@ -144,7 +161,11 @@ for column in range(len(midi_store)):
                  #if i != 0:
                      #time.sleep((float(row[0]) - i)/1000)
                      #time.sleep(float(row[0])/1000)
-                 time.sleep(time_scale)
+                 #time.sleep(time_scale)
+                 if time_memba == 0 :
+                    time_memba = float(row[0])
+                 time.sleep((float(row[0])-time_memba)/1000)
+                 time_memba = float(row[0])
              # save time delay for next frame
              #i = float(row[0])
              

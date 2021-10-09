@@ -5,7 +5,7 @@ import time
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-import cv2
+import cv2,os
 from scipy.ndimage.filters import gaussian_filter1d
 from math import atan2, cos, sin, degrees
 from tsmoothie.smoother import ConvolutionSmoother
@@ -46,6 +46,12 @@ far_wrist_midi = 74                  #
 center_wrist_far = 75                #
 # Far | Buttons ↑→↓                  #
 far_wrist_flip_midi = [78,77,76,79]  #
+# Far | Hip                          #
+far_hip_midi = 50                    #
+# Far | Knee                         #
+far_knee_midi = 51                   #
+# Far | Foot                         #
+far_foot_midi = 52                   #
 #####################################\
 # Near                              ##
 ######################################
@@ -63,6 +69,12 @@ near_wrist_midi      = 64            #
 center_wrist_near = 65               #
 # Near | Buttons ↑→↓                 #
 near_wrist_flip_midi = [68,67,66,69]##
+# Near | Hip                         #
+near_hip_midi = 53                   #
+# Near | Knee                        #
+near_knee_midi = 54                  #
+# Near | Foot                        #
+near_foot_midi = 55                  #
 #####################################\
 # Position                          ##
 ######################################
@@ -83,6 +95,9 @@ r3qt_midi = 82                       #
 right_midi = 83                      #
 # Left turn                          #
 left_midi = 84                       #
+######################################
+# Rotation                           #
+my_body_rot_midi = 85                #
 #####################################/
 ##  Threshholds                     ##
 ######################################
@@ -130,7 +145,7 @@ if send_midi_bool:
     import rtmidi
     #this should be a reference to a loopmidi (number)
     midiout = rtmidi.MidiOut()
-    midiout.open_port(1)
+    midiout.open_port(3)
 
 tmp_ind_r=0
 NearElbow=None
@@ -236,6 +251,7 @@ print("Dist max - ", dist_max)
 # Loop over the Rows #
 ######################
 
+
 with open('points.csv', newline='') as csvfile:
      spamreader = csv.reader(csvfile, delimiter=',')
      for row in spamreader:
@@ -289,15 +305,21 @@ with open('points.csv', newline='') as csvfile:
              
              my_elbow_tmp = myAngleRad(my_n_shoulder.get("X"),my_n_shoulder.get("Y"),my_n_elbow.get("X"),my_n_elbow.get("Y"))
              rot_my_elbow_n = rotate(my_n_elbow.get("X"),my_n_elbow.get("Y"),my_n_wrist.get("X"),my_n_wrist.get("Y"), my_elbow_tmp)
+             
              my_elbow_n = myAngle(my_n_elbow.get("X"),my_n_elbow.get("Y"),rot_my_elbow_n[0],rot_my_elbow_n[1])
-             #my_elbow_n = myAngle(my_n_elbow.get("X"),my_n_elbow.get("Y"),my_n_wrist.get("X"),my_n_wrist.get("Y"))
              NearElbow = int(remap(int(my_elbow_n), 0, 360, 0, 127))
+             
+             #my_elbow_n = myAngle(my_n_elbow.get("X"),my_n_elbow.get("Y"),my_n_wrist.get("X"),my_n_wrist.get("Y"))
+             #NearElbow  = int(remap(int(my_elbow_n), 0, 360, 0, 127))
              
              #################
              # Near shoulder #
              #################
              
-             my_shoulder_n = myAngle(my_n_shoulder.get("X"),my_n_shoulder.get("Y"),my_n_elbow.get("X"),my_n_elbow.get("Y"))
+             my_shoulder_tmp = myAngleRad(my_n_shoulder.get("X"),my_n_shoulder.get("Y"),my_n_hip.get("X"),my_n_hip.get("Y"))
+             rot_my_shoulder_n = rotate(my_n_shoulder.get("X"),my_n_shoulder.get("Y"),my_n_elbow.get("X"),my_n_elbow.get("Y"), my_shoulder_tmp)
+             
+             my_shoulder_n = myAngle(my_n_shoulder.get("X"),my_n_shoulder.get("Y"),rot_my_shoulder_n[0],rot_my_shoulder_n[1])
              my_shoulder_n = remap(int(my_shoulder_n), 0, 360, 0, 127)
              
              #########################
@@ -338,15 +360,27 @@ with open('points.csv', newline='') as csvfile:
              # Near Hip  #
              #############   
              
-             my_hip_n = myAngle(my_n_hip.get("X"),my_n_hip.get("Y"),my_n_knee.get("X"),my_n_knee.get("Y"))
+             my_hip_tmp = myAngleRad(my_n_shoulder.get("X"),my_n_shoulder.get("Y"),my_n_hip.get("X"),my_n_hip.get("Y"))
+             rot_my_hip_n = rotate(my_n_hip.get("X"),my_n_hip.get("Y"),my_n_knee.get("X"),my_n_knee.get("Y"), my_hip_tmp)
+             
+             my_hip_n = myAngle(my_n_hip.get("X"),my_n_hip.get("Y"),rot_my_hip_n[0],rot_my_hip_n[1])
              my_hip_n = remap(int(my_hip_n), 0, 360, 0, 127)
+             
+             #my_hip_n = myAngle(my_n_hip.get("X"),my_n_hip.get("Y"),my_n_knee.get("X"),my_n_knee.get("Y"))
+             #my_hip_n = remap(int(my_hip_n), 0, 360, 0, 127)
              
              #############
              # Near Knee #
              #############   
              
-             my_knee_n = myAngle(my_n_knee.get("X"),my_n_knee.get("Y"),my_n_foot.get("X"),my_n_foot.get("Y"))
-             my_knee_n = remap(int(my_knee_n), 0, 360, 0, 127)
+             my_knee_tmp = myAngleRad(my_n_hip.get("X"),my_n_hip.get("Y"),my_n_knee.get("X"),my_n_knee.get("Y"))
+             rot_my_knee_n = rotate(my_n_knee.get("X"),my_n_knee.get("Y"),my_n_foot.get("X"),my_n_foot.get("Y"), my_knee_tmp)
+             
+             my_knee_n = myAngle(my_n_knee.get("X"),my_n_knee.get("Y"),rot_my_knee_n[0],rot_my_knee_n[1])
+             my_knee_n = int(remap(int(my_knee_n), 0, 360, 0, 127))
+             
+             #my_knee_n = myAngle(my_n_knee.get("X"),my_n_knee.get("Y"),my_n_foot.get("X"),my_n_foot.get("Y"))
+             #my_knee_n = remap(int(my_knee_n), 0, 360, 0, 127)
              
              
              #############
@@ -385,15 +419,27 @@ with open('points.csv', newline='') as csvfile:
              # Far elbow #
              #############
                 
-             my_elbow_f = myAngle(my_f_elbow.get("X"),my_f_elbow.get("Y"),my_f_wrist.get("X"),my_f_wrist.get("Y"))
+             my_elbow_tmp = myAngleRad(my_f_shoulder.get("X"),my_f_shoulder.get("Y"),my_f_elbow.get("X"),my_f_elbow.get("Y"))
+             rot_my_elbow_f = rotate(my_f_elbow.get("X"),my_f_elbow.get("Y"),my_f_wrist.get("X"),my_f_wrist.get("Y"), my_elbow_tmp)
+             
+             my_elbow_f = myAngle(my_f_elbow.get("X"),my_f_elbow.get("Y"),rot_my_elbow_f[0],rot_my_elbow_f[1])
              FarElbow = int(remap(int(my_elbow_f), 0, 360, 0, 127))
+             
+             #my_elbow_f = myAngle(my_f_elbow.get("X"),my_f_elbow.get("Y"),my_f_wrist.get("X"),my_f_wrist.get("Y"))
+             #FarElbow = int(remap(int(my_elbow_f), 0, 360, 0, 127))
              
              ################
              # Far shoulder #
              ################
              
-             my_shoulder_f = myAngle(my_f_shoulder.get("X"),my_f_shoulder.get("Y"),my_f_elbow.get("X"),my_f_elbow.get("Y"))
+             my_shoulder_tmp = myAngleRad(my_f_shoulder.get("X"),my_f_shoulder.get("Y"),my_f_hip.get("X"),my_f_hip.get("Y"))
+             rot_my_shoulder_f = rotate(my_f_shoulder.get("X"),my_f_shoulder.get("Y"),my_f_elbow.get("X"),my_f_elbow.get("Y"), my_shoulder_tmp)
+             
+             my_shoulder_f = myAngle(my_f_shoulder.get("X"),my_f_shoulder.get("Y"),rot_my_shoulder_f[0],rot_my_shoulder_f[1])
              my_shoulder_f = remap(int(my_shoulder_f), 0, 360, 0, 127)
+             
+             #my_shoulder_f = myAngle(my_f_shoulder.get("X"),my_f_shoulder.get("Y"),my_f_elbow.get("X"),my_f_elbow.get("Y"))
+             #my_shoulder_f = remap(int(my_shoulder_f), 0, 360, 0, 127)
              
              ########################
              # Far Elbow Scaling    #
@@ -433,15 +479,29 @@ with open('points.csv', newline='') as csvfile:
              # Far Hip  #
              ############   
              
-             my_hip_f = myAngle(my_f_hip.get("X"),my_f_hip.get("Y"),my_f_knee.get("X"),my_f_knee.get("Y"))
+             
+             my_hip_tmp = myAngleRad(my_f_shoulder.get("X"),my_f_shoulder.get("Y"),my_f_hip.get("X"),my_f_hip.get("Y"))
+             rot_my_hip_f = rotate(my_f_hip.get("X"),my_f_hip.get("Y"),my_f_knee.get("X"),my_f_knee.get("Y"), my_hip_tmp)
+             
+             my_hip_f = myAngle(my_f_hip.get("X"),my_f_hip.get("Y"),rot_my_hip_f[0],rot_my_hip_f[1])
              my_hip_f = remap(int(my_hip_f), 0, 360, 0, 127)
+             
+             
+             #my_hip_f = myAngle(my_f_hip.get("X"),my_f_hip.get("Y"),my_f_knee.get("X"),my_f_knee.get("Y"))
+             #my_hip_f = remap(int(my_hip_f), 0, 360, 0, 127)
              
              ############
              # Far Knee #
              ############   
              
-             my_knee_f = myAngle(my_f_knee.get("X"),my_f_knee.get("Y"),my_f_foot.get("X"),my_f_foot.get("Y"))
-             my_knee_f = remap(int(my_knee_f), 0, 360, 0, 127)
+             my_knee_tmp = myAngleRad(my_f_hip.get("X"),my_f_hip.get("Y"),my_f_knee.get("X"),my_f_knee.get("Y"))
+             rot_my_elbow_f = rotate(my_f_knee.get("X"),my_f_knee.get("Y"),my_f_foot.get("X"),my_f_foot.get("Y"), my_knee_tmp)
+             
+             my_knee_f = myAngle(my_f_knee.get("X"),my_f_knee.get("Y"),rot_my_elbow_f[0],rot_my_elbow_f[1])
+             my_knee_f = int(remap(int(my_knee_f), 0, 360, 0, 127))
+             
+             #my_knee_f = myAngle(my_f_knee.get("X"),my_f_knee.get("Y"),my_f_foot.get("X"),my_f_foot.get("Y"))
+             #my_knee_f = remap(int(my_knee_f), 0, 360, 0, 127)
              
              
              ############
@@ -592,7 +652,7 @@ with open('points.csv', newline='') as csvfile:
                  
                  # Send MIDI
                  if send_midi_bool:
-                     my_delay = 0.01
+                     my_delay = 0.1
                      
                      ################
                      ## Midi Notes ##
@@ -608,17 +668,20 @@ with open('points.csv', newline='') as csvfile:
                      ## Near - Midi Send ##
                      ######################
                      
-                     
+                     ########
+                     # Arms #
+                     ######/
                      # Near | Elbow - knob
-                     if abs(my_arr_NearWrist[-1] - NearElbow) > 2:
+                     if abs(my_arr_NearWrist[-1] - NearElbow) > 0:
+                         time.sleep(my_delay)
                          midiout.send_message([176, near_elbow_midi, NearElbow])
-                         time.sleep(my_delay)
+                         
                      # Near | Elbow Scaling - knob
-                     if abs(my_arr_NearElbowScaling[-1] - my_n_elbow_scale_values) > 4:
-                         midiout.send_message([176, near_elbow_scaling_midi, my_n_elbow_scale_values])
-                         time.sleep(my_delay)
+                     #if abs(my_arr_NearElbowScaling[-1] - my_n_elbow_scale_values) > 4:
+                     #    midiout.send_message([176, near_elbow_scaling_midi, my_n_elbow_scale_values])
+                     #    time.sleep(my_delay)
                      # Near | Shoulder - knob
-                     if abs(my_arr_NearShoulder[-1] - my_shoulder_n) > 1:
+                     if abs(my_arr_NearShoulder[-1] - my_shoulder_n) > 0:
                          time.sleep(my_delay)
                          midiout.send_message([176, near_shoulder_midi, my_shoulder_n])
                      # Near | Shoulder Scaling - knob
@@ -630,62 +693,82 @@ with open('points.csv', newline='') as csvfile:
                      #    midiout.send_message([176, near_wrist_midi, NearWrist])
                      #    time.sleep(my_delay)
                      # Near | Wrist Center Flip
-                     if my_n_elbow_scale_values < 30 and near_elbow_flip_status_b != 1:
+                     if False:
+                         if my_n_elbow_scale_values < 30 and near_elbow_flip_status_b != 1:
+                             time.sleep(my_delay)
+                             midiout.send_message([0x90, center_wrist_near, 100])
+                             near_elbow_flip_status_b = 1
+                         elif my_n_elbow_scale_values >= 30 and near_elbow_flip_status_b != 2:
+                             time.sleep(my_delay)
+                             midiout.send_message([0x90, center_wrist_near, 100])
+                             near_elbow_flip_status_b = 2
+                         # Near | Wrist Switch Buttons    
+                             # Near | ↓ | Down sideways
+                             if near_elbow_flip_status_b != 1:
+                                 if NearElbow >= down_arm_midi_top and near_elbow_flip_status != 1 or NearElbow < down_arm_midi_bottom and near_elbow_flip_status != 1:
+                                     time.sleep(my_delay)
+                                     midiout.send_message([0x90, near_wrist_flip_midi[2], 100])
+                                     #print("down - ", NearElbow)
+                                     near_elbow_flip_status = 1
+                                 # Near | ← | Left Out
+                                 elif NearElbow < down_arm_midi_top and NearElbow >= up_arm_midi and near_elbow_flip_status != 3:
+                                     time.sleep(my_delay)                             
+                                     if near_elbow_flip_status == 1:
+                                         tmp_send = near_wrist_flip_midi[2]
+                                     elif near_elbow_flip_status == 2:
+                                         tmp_send = near_wrist_flip_midi[1]
+                                     elif near_elbow_flip_status == 4:
+                                         tmp_send = near_wrist_flip_midi[0]
+                            
+                                     #midiout.send_message([0x90, tmp_send, 100])
+                                     midiout.send_message([0x90, near_wrist_flip_midi[3], 100])
+                                     #print("out - ", NearElbow)
+                                     near_elbow_flip_status = 3
+                                 # Near | ↑ | Up sideways
+                                 elif NearElbow < up_arm_midi and NearElbow >= right_arm_midi and near_elbow_flip_status != 4:
+                                     time.sleep(my_delay)
+                                     midiout.send_message([0x90, near_wrist_flip_midi[0], 100])
+                                     #print("up - ", NearElbow)
+                                     near_elbow_flip_status = 4 
+                                 # Near | → | Right In
+                                 elif NearElbow < right_arm_midi and NearElbow >= down_arm_midi_bottom and near_elbow_flip_status != 2:
+                                     time.sleep(my_delay)
+                                     midiout.send_message([0x90, near_wrist_flip_midi[1], 100])
+                                     #print("in - ", NearElbow)
+                                     near_elbow_flip_status = 2
+                     ########
+                     # Legs #
+                     ######/
+                     
+                     if abs(my_arr_NearHip[-1] - int(my_hip_n)) > 0:
                          time.sleep(my_delay)
-                         midiout.send_message([0x90, center_wrist_near, 100])
-                         near_elbow_flip_status_b = 1
-                     elif my_n_elbow_scale_values >= 30 and near_elbow_flip_status_b != 2:
+                         midiout.send_message([176, near_hip_midi, int(my_hip_n)])
+                     
+                     if abs(my_arr_NearKnee[-1] - my_knee_n) > 0:
                          time.sleep(my_delay)
-                         midiout.send_message([0x90, center_wrist_near, 100])
-                         near_elbow_flip_status_b = 2
-                     # Near | Wrist Switch Buttons      
-                     # Near | ↓ | Down sideways
-                     if near_elbow_flip_status_b != 1:
-                         if NearElbow >= down_arm_midi_top and near_elbow_flip_status != 1 or NearElbow < down_arm_midi_bottom and near_elbow_flip_status != 1:
-                             time.sleep(my_delay)
-                             midiout.send_message([0x90, near_wrist_flip_midi[2], 100])
-                             #print("down - ", NearElbow)
-                             near_elbow_flip_status = 1
-                         # Near | ← | Left Out
-                         elif NearElbow < down_arm_midi_top and NearElbow >= up_arm_midi and near_elbow_flip_status != 3:
-                             time.sleep(my_delay)                             
-                             if near_elbow_flip_status == 1:
-                                 tmp_send = near_wrist_flip_midi[2]
-                             elif near_elbow_flip_status == 2:
-                                 tmp_send = near_wrist_flip_midi[1]
-                             elif near_elbow_flip_status == 4:
-                                 tmp_send = near_wrist_flip_midi[0]
-                    
-                             #midiout.send_message([0x90, tmp_send, 100])
-                             midiout.send_message([0x90, near_wrist_flip_midi[3], 100])
-                             #print("out - ", NearElbow)
-                             near_elbow_flip_status = 3
-                         # Near | ↑ | Up sideways
-                         elif NearElbow < up_arm_midi and NearElbow >= right_arm_midi and near_elbow_flip_status != 4:
-                             time.sleep(my_delay)
-                             midiout.send_message([0x90, near_wrist_flip_midi[0], 100])
-                             #print("up - ", NearElbow)
-                             near_elbow_flip_status = 4 
-                         # Near | → | Right In
-                         elif NearElbow < right_arm_midi and NearElbow >= down_arm_midi_bottom and near_elbow_flip_status != 2:
-                             time.sleep(my_delay)
-                             midiout.send_message([0x90, near_wrist_flip_midi[1], 100])
-                             #print("in - ", NearElbow)
-                             near_elbow_flip_status = 2
+                         print(my_knee_n)
+                         midiout.send_message([176, near_knee_midi, my_knee_n])
+                     
                      
                      #####################
                      ## Far - Midi Send ##
                      #####################
+                     
+                     ########
+                     # Arms #
+                     ######/
+                     
                      # Far | Elbow - knob
-                     if abs(my_arr_FarWrist[-1] - FarElbow) > 2:
+                     if abs(my_arr_FarWrist[-1] - FarElbow) > 0:
+                         time.sleep(my_delay)
                          midiout.send_message([176, far_elbow_midi, FarElbow])
-                         time.sleep(my_delay)
+                         
                      # Far | Elbow Scaling - knob
-                     if abs(my_arr_FarElbowScaling[-1] - my_f_elbow_scale_values) > 4:
-                         midiout.send_message([176, far_elbow_scaling_midi, my_f_elbow_scale_values])
-                         time.sleep(my_delay)
+                     #if abs(my_arr_FarElbowScaling[-1] - my_f_elbow_scale_values) > 4:
+                     #    midiout.send_message([176, far_elbow_scaling_midi, my_f_elbow_scale_values])
+                     #    time.sleep(my_delay)
                      # Far | Shoulder - knob
-                     if abs(my_arr_FarShoulder[-1] - my_shoulder_f) > 1:
+                     if abs(my_arr_FarShoulder[-1] - my_shoulder_f) > 0:
                          time.sleep(my_delay)
                          midiout.send_message([176, far_shoulder_midi, my_shoulder_f])
                      # Far | Shoulder Scaling - knob
@@ -696,43 +779,62 @@ with open('points.csv', newline='') as csvfile:
                      #if abs(my_arr_FarWrist[-1] - FarWrist) > 2:
                      #    midiout.send_message([176, far_wrist_midi, FarWrist])
                      #    time.sleep(my_delay)
-                     # Far | Wrist Center Flip
-                     if my_f_elbow_scale_values < 30 and far_elbow_flip_status_b != 1:
-                         time.sleep(my_delay)
-                         midiout.send_message([0x90, center_wrist_far, 100])
-                         far_elbow_flip_status_b = 1
-                     elif my_f_elbow_scale_values >= 30 and far_elbow_flip_status_b != 2:
-                         time.sleep(my_delay)
-                         midiout.send_message([0x90, center_wrist_far, 100])
-                         far_elbow_flip_status_b = 2
-                     # Far | Wrist Switch Buttons      
-                     # Far | ↓ | Down sideways
-                     if far_elbow_flip_status_b != 1:
-                         if FarElbow >= down_arm_midi_top and far_elbow_flip_status != 1 or FarElbow < down_arm_midi_bottom and far_elbow_flip_status != 1:
+                     if False:
+                         # Far | Wrist Center Flip
+                         if my_f_elbow_scale_values < 30 and far_elbow_flip_status_b != 1:
                              time.sleep(my_delay)
-                             midiout.send_message([0x90, far_wrist_flip_midi[2], 100])
-                             #print("down - ", FarElbow)
-                             far_elbow_flip_status = 1
-                         # Far | ← | Left Out
-                         elif FarElbow < down_arm_midi_top and FarElbow >= up_arm_midi and far_elbow_flip_status != 3:
-                             time.sleep(my_delay)                             
-                             midiout.send_message([0x90, far_wrist_flip_midi[1], 100])
-                             #print("out - ", NearElbow)
-                             far_elbow_flip_status = 3
-                         # Far | ↑ | Up sideways
-                         elif FarElbow < up_arm_midi and FarElbow >= right_arm_midi and far_elbow_flip_status != 4:
+                             midiout.send_message([0x90, center_wrist_far, 100])
+                             far_elbow_flip_status_b = 1
+                         elif my_f_elbow_scale_values >= 30 and far_elbow_flip_status_b != 2:
                              time.sleep(my_delay)
-                             midiout.send_message([0x90, far_wrist_flip_midi[0], 100])
-                             #print("up - ", FarElbow)
-                             far_elbow_flip_status = 4 
-                         # Far | → | Right In
-                         elif FarElbow < right_arm_midi and FarElbow >= down_arm_midi_bottom and far_elbow_flip_status != 2:
-                             time.sleep(my_delay)
-                             midiout.send_message([0x90, far_wrist_flip_midi[3], 100])
-                             #print("in - ", FarElbow)
-                             far_elbow_flip_status = 2
+                             midiout.send_message([0x90, center_wrist_far, 100])
+                             far_elbow_flip_status_b = 2
+                         # Far | Wrist Switch Buttons    
+                         
+                         # Far | ↓ | Down sideways
+                         if far_elbow_flip_status_b != 1:
+                             if FarElbow >= down_arm_midi_top and far_elbow_flip_status != 1 or FarElbow < down_arm_midi_bottom and far_elbow_flip_status != 1:
+                                 time.sleep(my_delay)
+                                 midiout.send_message([0x90, far_wrist_flip_midi[2], 100])
+                                 #print("down - ", FarElbow)
+                                 far_elbow_flip_status = 1
+                             # Far | ← | Left Out
+                             elif FarElbow < down_arm_midi_top and FarElbow >= up_arm_midi and far_elbow_flip_status != 3:
+                                 time.sleep(my_delay)                             
+                                 midiout.send_message([0x90, far_wrist_flip_midi[1], 100])
+                                 #print("out - ", NearElbow)
+                                 far_elbow_flip_status = 3
+                             # Far | ↑ | Up sideways
+                             elif FarElbow < up_arm_midi and FarElbow >= right_arm_midi and far_elbow_flip_status != 4:
+                                 time.sleep(my_delay)
+                                 midiout.send_message([0x90, far_wrist_flip_midi[0], 100])
+                                 #print("up - ", FarElbow)
+                                 far_elbow_flip_status = 4 
+                             # Far | → | Right In
+                             elif FarElbow < right_arm_midi and FarElbow >= down_arm_midi_bottom and far_elbow_flip_status != 2:
+                                 time.sleep(my_delay)
+                                 midiout.send_message([0x90, far_wrist_flip_midi[3], 100])
+                                 #print("in - ", FarElbow)
+                                 far_elbow_flip_status = 2
+                             
+                     ########
+                     # Legs #
+                     ######/
                      
+                     if abs(my_arr_FarHip[-1] - int(my_hip_f)) > 0:
+                         time.sleep(my_delay)
+                         midiout.send_message([176, far_hip_midi, int(my_hip_f)])
                      
+                     if abs(my_arr_FarKnee[-1] - int(my_knee_f)) > 0:
+                         time.sleep(my_delay)
+                         midiout.send_message([176, far_knee_midi, int(my_knee_f)])
+           
+                     ######################
+                     ## Body - Midi Send ##
+                     ######################
+                     #if abs(my_arr_BodyRot[-1] - my_body_rot) > 2:
+                     time.sleep(my_delay)
+                     midiout.send_message([176, my_body_rot_midi, my_body_rot])
                  
                  #Quit on ESC
                  if cv2.waitKey(1) & 0xFF == 27:
@@ -889,14 +991,48 @@ for x in range(len(my_arr_NearElbow)):
 
 
 
+
+
+################
+# Smooth Legs  #
+################
+
+if True:
+    
+    #smooth path; avoid smoothing transition 127 <--> 0
+    i=1
+    for x in range(len(my_arr_FarKnee)):
+        if my_arr_FarKnee[x] == 127 and my_arr_FarKnee[x+1] == 0:
+            my_arr_FarKnee[i+3:x-3] = gaussian_filter1d(my_arr_FarKnee[i+3:x-3], sigma=0.4)
+
+    i=1
+    for x in range(len(my_arr_FarHip)):
+        if my_arr_FarHip[x] == 127 and my_arr_FarHip[x+1] == 0:
+            my_arr_FarHip[i+3:x-3] = gaussian_filter1d(my_arr_FarHip[i+3:x-3], sigma=0.4)
+
+    i=1
+    for x in range(len(my_arr_NearKnee)):
+        if my_arr_NearKnee[x] == 127 and my_arr_NearKnee[x+1] == 0:
+            my_arr_NearKnee[i+3:x-3] = gaussian_filter1d(my_arr_NearKnee[i+3:x-3], sigma=0.4)
+
+    i=1
+    for x in range(len(my_arr_NearHip)):
+        if my_arr_NearHip[x] == 127 and my_arr_NearHip[x+1] == 0:
+            my_arr_NearHip[i+3:x-3] = gaussian_filter1d(my_arr_NearHip[i+3:x-3], sigma=0.4)
+
+
+
 ########################
 # Smooth Body Rotation #
 ########################
 
 if True:
-    smoother = ConvolutionSmoother(window_len=20, window_type='ones')
-    smoother.smooth(my_arr_BodyRot)
-    my_arr_BodyRot = smoother.smooth_data[0]
+    
+    i=1
+    for x in range(len(my_arr_BodyRot)):
+        if my_arr_BodyRot[x] == 127 and my_arr_BodyRot[x+1] == 0:
+            my_arr_BodyRot[i+3:x-3] = gaussian_filter1d(my_arr_BodyRot[i+3:x-3], sigma=0.4)
+            
 
 
 #############
@@ -936,22 +1072,39 @@ plt.plot(my_arr_BodyRot)
 # Save to File #
 ################
 
-with open('elbow.csv', 'w', newline='') as csvfile:
+# Clean up existing files
+if os.path.exists("frontflip.csv"):
+    os.remove("frontflip.csv") 
+
+
+
+'''
+int(my_arr_NearElbow[x]),
+my_arr_NearShoulder[x],
+my_arr_NearWristSwitch[x],
+my_arr_NearElbowScaling[x],
+my_arr_NearShoulderInside[x],
+my_arr_FarKnee[x],
+my_arr_FarHip[x],
+my_arr_NearKnee[x],
+my_arr_NearHip[x],
+int(my_arr_BodyRot[x])
+'''
+    
+    
+with open('frontflip.csv', 'w', newline='') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',')
             for x in range(len(my_arr_NearElbow)):
                     spamwriter.writerow([sl_arr[x],
                                          int(my_arr_NearElbow[x]),
-                                         my_arr_NearShoulder[x],
-                                         my_arr_NearWristSwitch[x],
-                                         my_arr_NearElbowScaling[x],
-                                         my_arr_NearShoulderInside[x],
-                                         my_arr_FarFoot[x],
-                                         my_arr_FarKnee[x],
-                                         my_arr_FarHip[x],
-                                         my_arr_NearFoot[x],
-                                         my_arr_NearKnee[x],
-                                         my_arr_NearHip[x],
-                                         my_arr_BodyRot[x]
+                                         int(my_arr_NearShoulder[x]),
+                                         int(my_arr_FarElbow[x]),
+                                         int(my_arr_FarShoulder[x]),
+                                         int(my_arr_NearHip[x]),
+                                         int(my_arr_NearKnee[x]),
+                                         int(my_arr_FarHip[x]),
+                                         int(my_arr_FarKnee[x]),
+                                         int(my_arr_BodyRot[x])
                                        ])
                     
 
