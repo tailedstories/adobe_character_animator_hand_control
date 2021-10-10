@@ -23,8 +23,8 @@ mp_holistic = mp.solutions.holistic
 
 #this should be a reference to your camera (number)
 #               or a video reference (file)
-cam_ref=1
-#cam_ref="arm_move_f_2.mp4"
+#cam_ref=3
+cam_ref="front_flip_2_4k.mp4"
 
 send_midi_bool = True
 
@@ -111,14 +111,15 @@ if send_midi_bool:
     midiout = rtmidi.MidiOut()
     midiout.open_port(1)
 
-dist_max = 163
-dist_min = 100
-dist_max_should = 264
-dist_min_should = 220
+dist_max = 230
+dist_min = 14
+dist_max_should = 230
+dist_min_should = 5
 
 my_arr_NearWrist = [0]
 my_arr_NearShoulder = [0]
 my_arr_NearShoulderScaling = [0]
+my_arr_NearElbowScaling = [0]
 
 near_elbow_flip_status = 3
 near_elbow_flip_status_b = 2
@@ -126,6 +127,7 @@ near_elbow_flip_status_b = 2
 my_arr_FarWrist = [0]
 my_arr_FarShoulder = [0]
 my_arr_FarShoulderScaling = [0]
+my_arr_FarElbowScaling = [0]
 
 far_elbow_flip_status = 3
 far_elbow_flip_status_b = 2
@@ -176,8 +178,8 @@ calc_timestamps = [0.0]
 ##############################
 
 with mp_holistic.Holistic(
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5) as holistic:
+    min_detection_confidence=0.7,
+    min_tracking_confidence=0.7) as holistic:
   while cap.isOpened():
     success, image = cap.read()
     if not success:
@@ -196,7 +198,7 @@ with mp_holistic.Holistic(
     image.flags.writeable = True
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     mp_drawing.draw_landmarks(
-        image, results.face_landmarks, mp_holistic.FACE_CONNECTIONS)
+        image, results.face_landmarks, mp_holistic.FACEMESH_TESSELATION)
     mp_drawing.draw_landmarks(
         image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
     mp_drawing.draw_landmarks(
@@ -432,16 +434,16 @@ with mp_holistic.Holistic(
             #########################################################
             
             # Near | Elbow - knob
-            if abs(my_arr_NearWrist[-1] - NearElbow) > 2:
+            if abs(my_arr_NearWrist[-1] - NearElbow) > 4:
                 midiout.send_message([176, near_elbow_midi, NearElbow])
                 my_arr_NearWrist[-1] = NearElbow
                 time.sleep(my_delay)
             # Near | Elbow Scaling - knob
-            #if abs(my_arr_NearElbowScaling[-1] - my_n_elbow_scale_values) > 4:
-                #midiout.send_message([176, near_elbow_scaling_midi, my_n_elbow_scale_values])
-            #    time.sleep(my_delay)
+            if abs(my_arr_NearElbowScaling[-1] - my_n_elbow_scale_values) > 4:
+                midiout.send_message([176, near_elbow_scaling_midi, my_n_elbow_scale_values])
+                time.sleep(my_delay)
             # Near | Shoulder - knob
-            if abs(my_arr_NearShoulder[-1] - my_shoulder_n) > 1:
+            if abs(my_arr_NearShoulder[-1] - my_shoulder_n) > 4:
                 midiout.send_message([176, near_shoulder_midi, my_shoulder_n])
                 my_arr_NearShoulder[-1] = my_shoulder_n
                 time.sleep(my_delay)
@@ -503,15 +505,15 @@ with mp_holistic.Holistic(
             #####################
             #if False:
             # Far | Elbow - knob
-            if abs(my_arr_FarWrist[-1] - FarElbow) > 2:
+            if abs(my_arr_FarWrist[-1] - FarElbow) > 4:
                 midiout.send_message([176, far_elbow_midi, FarElbow])
                 time.sleep(my_delay)
             # Far | Elbow Scaling - knob
-            #if abs(my_arr_FarElbowScaling[-1] - my_f_elbow_scale_values) > 4:
-                #midiout.send_message([176, far_elbow_scaling_midi, my_f_elbow_scale_values])
-            #    time.sleep(my_delay)
+            if abs(my_arr_FarElbowScaling[-1] - my_f_elbow_scale_values) > 4:
+                midiout.send_message([176, far_elbow_scaling_midi, my_f_elbow_scale_values])
+                time.sleep(my_delay)
             # Far | Shoulder - knob
-            if abs(my_arr_FarShoulder[-1] - my_shoulder_f) > 1:
+            if abs(my_arr_FarShoulder[-1] - my_shoulder_f) > 4:
                 time.sleep(my_delay)
                 midiout.send_message([176, far_shoulder_midi, my_shoulder_f])
             # Far | Shoulder Scaling - knob
