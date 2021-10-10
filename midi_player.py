@@ -24,7 +24,7 @@ my_width  = 1280
 # send midi while playing
 send_midi_bool = False
 # display joints
-display_bool = True
+display_bool = False
 my_delay = 0.02
 
             ###############
@@ -900,18 +900,6 @@ for i in range(len(my_arr_NearShoulderScaling_s)):
        my_n_shoulder_scale = 0
     my_arr_NearShoulderInside.append(int(my_n_shoulder_scale))
 
-################
-# Smooth Wrist #
-################
-
-my_arr_NearWrist = gaussian_filter1d(my_arr_NearWrist, sigma=1)
-
-# optional smoothing
-if False:
-    smoother = ConvolutionSmoother(window_len=20, window_type='ones')
-    smoother.smooth(my_arr_NearWrist)
-    my_arr_NearWrist = smoother.smooth_data[0]
-
 
 #################################
 # Shoulder Scaling Post Process #
@@ -923,6 +911,8 @@ my_arr_NearElbowScaling = gaussian_filter1d(my_arr_NearElbowScaling, sigma=8)
 for i in range(len(my_arr_NearShoulderScaling_s)):
     if my_arr_NearElbowScaling[i] > 120:
         my_arr_NearElbowScaling[i] = 127
+
+
 
 
 ####################################
@@ -953,20 +943,6 @@ for i in range(len(my_arr_NearShoulderInside)):
 
 
 
-
-###############################
-# Elbow Rotation Post Process #
-###############################
-
-        
-#smooth path; avoid smoothing transition 127 <--> 0
-i=1
-for x in range(len(my_arr_NearElbow)):
-    if my_arr_NearElbow[x] == 127 and my_arr_NearElbow[x+1] == 0:
-        my_arr_NearElbow[i+3:x-3] = gaussian_filter1d(my_arr_NearElbow[i+3:x-3], sigma=0.4)
-
-
-
 #######################
 # Wrist Switch Button #
 #######################
@@ -992,6 +968,60 @@ for x in range(len(my_arr_NearElbow)):
 
 
 
+################
+# Smooth Wrist #
+################
+
+my_arr_NearWrist = gaussian_filter1d(my_arr_NearWrist, sigma=1)
+
+# optional smoothing
+if False:
+    smoother = ConvolutionSmoother(window_len=20, window_type='ones')
+    smoother.smooth(my_arr_NearWrist)
+    my_arr_NearWrist = smoother.smooth_data[0]
+
+
+################
+# Smooth Elbow #
+################
+
+if True:        
+    #smooth path; avoid smoothing transition 127 <--> 0
+    i=1
+    for x in range(len(my_arr_NearElbow)-1):
+        if my_arr_NearElbow[x] >= 125 and my_arr_NearElbow[x+1] <= 5 or my_arr_NearElbow[x+1] >= 125 and my_arr_NearElbow[x] <= 5:
+            my_arr_NearElbow[i+3:x-3] = gaussian_filter1d(my_arr_NearElbow[i+3:x-3], sigma=5)
+            i=x+1
+    my_arr_NearElbow[i+3:x-3] = gaussian_filter1d(my_arr_NearElbow[i+3:x-3], sigma=5)
+    
+    i=1
+    for x in range(len(my_arr_FarElbow)-1):
+        if my_arr_FarElbow[x] >= 125 and my_arr_FarElbow[x+1] <= 5 or my_arr_FarElbow[x+1] >= 125 and my_arr_FarElbow[x] <= 5:
+            my_arr_FarElbow[i+3:x-3] = gaussian_filter1d(my_arr_FarElbow[i+3:x-3], sigma=5)
+            i=x+1
+    my_arr_FarElbow[i+3:x-3] = gaussian_filter1d(my_arr_FarElbow[i+3:x-3], sigma=5)
+
+
+###################
+# Smooth Shoulder #
+###################
+
+if True:     
+    #smooth path; avoid smoothing transition 127 <--> 0
+    i=1
+    for x in range(len(my_arr_NearShoulder)-1):
+        if my_arr_NearShoulder[x] >= 125 and my_arr_NearShoulder[x+1] <= 5 or my_arr_NearShoulder[x+1] >= 125 and my_arr_NearShoulder[x] <= 5:
+            my_arr_NearShoulder[i+3:x-3] = gaussian_filter1d(my_arr_NearShoulder[i+3:x-3], sigma=5)
+            i=x+1
+    my_arr_NearShoulder[i+3:x-3] = gaussian_filter1d(my_arr_NearShoulder[i+3:x-3], sigma=5)
+    
+    i=1
+    for x in range(len(my_arr_FarShoulder)-1):
+        if my_arr_FarShoulder[x] >= 125 and my_arr_FarShoulder[x+1] <= 5 or my_arr_FarShoulder[x+1] >= 125 and my_arr_FarShoulder[x] <= 5:
+            my_arr_FarShoulder[i+3:x-3] = gaussian_filter1d(my_arr_FarShoulder[i+3:x-3], sigma=5)
+            i=x+1
+    my_arr_FarShoulder[i+3:x-3] = gaussian_filter1d(my_arr_FarShoulder[i+3:x-3], sigma=5)
+
 
 ################
 # Smooth Legs  #
@@ -1001,25 +1031,32 @@ if True:
     
     #smooth path; avoid smoothing transition 127 <--> 0
     i=1
-    for x in range(len(my_arr_FarKnee)):
-        if my_arr_FarKnee[x] == 127 and my_arr_FarKnee[x+1] == 0:
-            my_arr_FarKnee[i+3:x-3] = gaussian_filter1d(my_arr_FarKnee[i+3:x-3], sigma=0.4)
-
+    for x in range(len(my_arr_FarKnee)-1):
+        if my_arr_FarKnee[x] >= 125 and my_arr_FarKnee[x+1] <= 5 or  my_arr_FarKnee[x+1] >= 125 and my_arr_FarKnee[x] <= 5:
+            my_arr_FarKnee[i+3:x-3] = gaussian_filter1d(my_arr_FarKnee[i+3:x-3], sigma=5)
+            i=x
+    my_arr_FarKnee[i+3:x-3] = gaussian_filter1d(my_arr_FarKnee[i+3:x-3], sigma=5)
+    
     i=1
-    for x in range(len(my_arr_FarHip)):
-        if my_arr_FarHip[x] == 127 and my_arr_FarHip[x+1] == 0:
-            my_arr_FarHip[i+3:x-3] = gaussian_filter1d(my_arr_FarHip[i+3:x-3], sigma=0.4)
-
+    for x in range(len(my_arr_FarHip)-1):
+        if my_arr_FarHip[x] >= 125 and my_arr_FarHip[x+1] <= 5 or my_arr_FarHip[x+1] >= 125 and my_arr_FarHip[x] <= 5:
+            my_arr_FarHip[i+3:x-3] = gaussian_filter1d(my_arr_FarHip[i+3:x-3], sigma=5)
+            i=x
+    my_arr_FarHip[i+3:x-3] = gaussian_filter1d(my_arr_FarHip[i+3:x-3], sigma=5)
+    
     i=1
-    for x in range(len(my_arr_NearKnee)):
-        if my_arr_NearKnee[x] == 127 and my_arr_NearKnee[x+1] == 0:
-            my_arr_NearKnee[i+3:x-3] = gaussian_filter1d(my_arr_NearKnee[i+3:x-3], sigma=0.4)
-
+    for x in range(len(my_arr_NearKnee)-1):
+        if my_arr_NearKnee[x] >= 125 and my_arr_NearKnee[x+1] <= 5 or my_arr_NearKnee[x+1] >= 125 and my_arr_NearKnee[x] <= 5:
+            my_arr_NearKnee[i+3:x-3] = gaussian_filter1d(my_arr_NearKnee[i+3:x-3], sigma=5)
+            i=x
+    my_arr_NearKnee[i+3:x-3] = gaussian_filter1d(my_arr_NearKnee[i+3:x-3], sigma=5)
+    
     i=1
-    for x in range(len(my_arr_NearHip)):
-        if my_arr_NearHip[x] == 127 and my_arr_NearHip[x+1] == 0:
-            my_arr_NearHip[i+3:x-3] = gaussian_filter1d(my_arr_NearHip[i+3:x-3], sigma=0.4)
-
+    for x in range(len(my_arr_NearHip)-1):
+        if my_arr_NearHip[x] >= 125 and my_arr_NearHip[x+1] <= 5 or my_arr_NearHip[x+1] >= 125 and my_arr_NearHip[x] <= 5:
+            my_arr_NearHip[i+3:x-3] = gaussian_filter1d(my_arr_NearHip[i+3:x-3], sigma=5)
+            i=x
+    my_arr_NearHip[i+3:x-3] = gaussian_filter1d(my_arr_NearHip[i+3:x-3], sigma=5)
 
 
 ########################
@@ -1029,9 +1066,10 @@ if True:
 if True:
     
     i=1
-    for x in range(len(my_arr_BodyRot)):
-        if my_arr_BodyRot[x] == 127 and my_arr_BodyRot[x+1] == 0:
-            my_arr_BodyRot[i+3:x-3] = gaussian_filter1d(my_arr_BodyRot[i+3:x-3], sigma=0.4)
+    for x in range(len(my_arr_BodyRot)-1):
+        if my_arr_BodyRot[x] >= 125 and my_arr_BodyRot[x+1] <= 5 or my_arr_BodyRot[x+1] >= 125 and my_arr_BodyRot[x] <= 5:
+            my_arr_BodyRot[i+3:x-3] = gaussian_filter1d(my_arr_BodyRot[i+3:x-3], sigma=10)
+            i=x
             
 
 
@@ -1043,10 +1081,12 @@ if True:
 #plt.plot(my_arr_NearWrist)
 
 # Elbow Rotation
-#plt.plot(my_arr_NearElbow)
+plt.plot(my_arr_NearElbow)
+plt.plot(my_arr_FarElbow)
 
 # Shoulder Rotation
 #plt.plot(my_arr_NearShoulder)
+#plt.plot(my_arr_FarShoulder)
 
 # Wrist/Elbow zone switch
 #plt.plot(my_arr_NearWristSwitch)
@@ -1058,14 +1098,14 @@ if True:
 #plt.plot(my_arr_NearShoulderInside)
 
 # Body Rotation
-plt.plot(my_arr_BodyRot)
+#plt.plot(my_arr_BodyRot)
 
 # Far Hip Rotation
 #plt.plot(my_arr_FarHip)
 
 # Far Knee Rotation
 #plt.plot(my_arr_FarKnee)
-
+#plt.plot(my_arr_NearKnee)
 
 
 ################
