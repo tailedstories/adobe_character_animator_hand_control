@@ -6,6 +6,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2,os
+import pandas as pd
 from scipy.ndimage.filters import gaussian_filter1d
 from math import atan2, cos, sin, degrees
 from tsmoothie.smoother import ConvolutionSmoother
@@ -135,6 +136,36 @@ def rotate(cx, cy, ex, ey, angle):
     qx = cx + math.cos(angle) * (ex - cx) - math.sin(angle) * (ey - cy)
     qy = cy + math.sin(angle) * (ex - cx) + math.cos(angle) * (ey - cy)
     return qx, qy
+
+def my_smoothing(my_arr,mysigma):
+    # set index
+    i=1
+    # loop ovel all hip values
+    for x in range(len(my_arr)-1):
+        # check if midi values are in range 10 > x < 100
+        if  abs(my_arr[x] - my_arr[x+1]) > 10 and abs(my_arr[x] - my_arr[x+1]) < 100:
+            # jerky movement correction, if velues are too different, replace with old +5
+            # range to skip 
+            if my_arr[x] >= 126 and my_arr[x+1] <= 2 or my_arr[x] <= 2 and my_arr[x+1] >= 126:
+                pass
+            else:
+                # add if biger value
+                if my_arr[x] - my_arr[x-1] > 0:
+                    my_arr[x] = my_arr[x-1] + 5
+                # substract if smaller value
+                else:
+                    my_arr[x] = my_arr[x-1] - 5
+        # smooth range that would not break min/max
+        if my_arr[x] >= 125 and my_arr[x+1] <= 5 and abs(x-i) > 10 or my_arr[x+1] >= 125 and my_arr[x] <= 5 and abs(x-i) > 10:
+            my_arr[i+1:x-1] = gaussian_filter1d(my_arr[i+1:x-1], sigma=mysigma)
+            i=x+1
+        # update index if values go between 127 and 0 a bunch
+        if my_arr[x] >= 120 and my_arr[x+1] <= 7 or my_arr[x] <= 7 and my_arr[x+1] >= 120:
+            i=x+1
+    # smoothing of the final  bin
+    my_arr[i+1:x-1] = gaussian_filter1d(my_arr[i+1:x-1], sigma=mysigma)
+    return my_arr 
+    
 
 ##################
 # Init variables #
@@ -972,10 +1003,13 @@ for x in range(len(my_arr_NearElbow)):
 # Smooth Wrist #
 ################
 
-my_arr_NearWrist = gaussian_filter1d(my_arr_NearWrist, sigma=1)
+my_arr_NearWrist = my_smoothing(my_arr_NearWrist,5)
+my_arr_FarWrist = my_smoothing(my_arr_FarWrist,5)
+
 
 # optional smoothing
 if False:
+    my_arr_NearWrist = gaussian_filter1d(my_arr_NearWrist, sigma=1)
     smoother = ConvolutionSmoother(window_len=20, window_type='ones')
     smoother.smooth(my_arr_NearWrist)
     my_arr_NearWrist = smoother.smooth_data[0]
@@ -985,18 +1019,21 @@ if False:
 # Smooth Elbow #
 ################
 
-if True:        
+my_arr_NearElbow = my_smoothing(my_arr_NearElbow,5)
+my_arr_FarElbow = my_smoothing(my_arr_FarElbow,5)
+
+if False:        
     #smooth path; avoid smoothing transition 127 <--> 0
     i=1
     for x in range(len(my_arr_NearElbow)-1):
-        if my_arr_NearElbow[x] >= 125 and my_arr_NearElbow[x+1] <= 5 or my_arr_NearElbow[x+1] >= 125 and my_arr_NearElbow[x] <= 5:
+        if my_arr_NearElbow[x] >= 125 and my_arr_NearElbow[x+1] <= 5 and abs(x-i) > 3 or my_arr_NearElbow[x+1] >= 125 and my_arr_NearElbow[x] <= 5 and abs(x-i) > 3:
             my_arr_NearElbow[i+3:x-3] = gaussian_filter1d(my_arr_NearElbow[i+3:x-3], sigma=5)
             i=x+1
     my_arr_NearElbow[i+3:x-3] = gaussian_filter1d(my_arr_NearElbow[i+3:x-3], sigma=5)
     
     i=1
     for x in range(len(my_arr_FarElbow)-1):
-        if my_arr_FarElbow[x] >= 125 and my_arr_FarElbow[x+1] <= 5 or my_arr_FarElbow[x+1] >= 125 and my_arr_FarElbow[x] <= 5:
+        if my_arr_FarElbow[x] >= 125 and my_arr_FarElbow[x+1] <= 5 and abs(x-i) > 3 or my_arr_FarElbow[x+1] >= 125 and my_arr_FarElbow[x] <= 5 and abs(x-i) > 3:
             my_arr_FarElbow[i+3:x-3] = gaussian_filter1d(my_arr_FarElbow[i+3:x-3], sigma=5)
             i=x+1
     my_arr_FarElbow[i+3:x-3] = gaussian_filter1d(my_arr_FarElbow[i+3:x-3], sigma=5)
@@ -1006,18 +1043,21 @@ if True:
 # Smooth Shoulder #
 ###################
 
-if True:     
+my_arr_NearShoulder = my_smoothing(my_arr_NearShoulder,5)
+my_arr_FarShoulder = my_smoothing(my_arr_FarShoulder,5)
+
+if False:     
     #smooth path; avoid smoothing transition 127 <--> 0
     i=1
     for x in range(len(my_arr_NearShoulder)-1):
-        if my_arr_NearShoulder[x] >= 125 and my_arr_NearShoulder[x+1] <= 5 or my_arr_NearShoulder[x+1] >= 125 and my_arr_NearShoulder[x] <= 5:
+        if my_arr_NearShoulder[x] >= 125 and my_arr_NearShoulder[x+1] <= 5 and abs(x-i) > 3 or my_arr_NearShoulder[x+1] >= 125 and my_arr_NearShoulder[x] <= 5 and abs(x-i) > 3:
             my_arr_NearShoulder[i+3:x-3] = gaussian_filter1d(my_arr_NearShoulder[i+3:x-3], sigma=5)
             i=x+1
     my_arr_NearShoulder[i+3:x-3] = gaussian_filter1d(my_arr_NearShoulder[i+3:x-3], sigma=5)
     
     i=1
     for x in range(len(my_arr_FarShoulder)-1):
-        if my_arr_FarShoulder[x] >= 125 and my_arr_FarShoulder[x+1] <= 5 or my_arr_FarShoulder[x+1] >= 125 and my_arr_FarShoulder[x] <= 5:
+        if my_arr_FarShoulder[x] >= 125 and my_arr_FarShoulder[x+1] <= 5 and abs(x-i) > 3 or my_arr_FarShoulder[x+1] >= 125 and my_arr_FarShoulder[x] <= 5 and abs(x-i) > 3:
             my_arr_FarShoulder[i+3:x-3] = gaussian_filter1d(my_arr_FarShoulder[i+3:x-3], sigma=5)
             i=x+1
     my_arr_FarShoulder[i+3:x-3] = gaussian_filter1d(my_arr_FarShoulder[i+3:x-3], sigma=5)
@@ -1029,45 +1069,89 @@ if True:
 
 if True:
     
+    ###############
+    # Near | Knee #
+    ###############
+    my_arr_NearKnee = my_smoothing(my_arr_NearKnee,5)
     #smooth path; avoid smoothing transition 127 <--> 0
-    i=1
-    for x in range(len(my_arr_FarKnee)-1):
-        if my_arr_FarKnee[x] >= 125 and my_arr_FarKnee[x+1] <= 5 or  my_arr_FarKnee[x+1] >= 125 and my_arr_FarKnee[x] <= 5:
-            my_arr_FarKnee[i+3:x-3] = gaussian_filter1d(my_arr_FarKnee[i+3:x-3], sigma=5)
-            i=x
-    my_arr_FarKnee[i+3:x-3] = gaussian_filter1d(my_arr_FarKnee[i+3:x-3], sigma=5)
+    #i=1
+    #for x in range(len(my_arr_FarKnee)-1):
+    #    if my_arr_FarKnee[x] > 125 and my_arr_FarKnee[x+1] > 5 or my_arr_FarKnee[x+1] < 125 and my_arr_FarKnee[x] < 5:
+    #        if abs(my_arr_FarKnee[x] - my_arr_FarKnee[x-1]) > 5:
+    #            if (my_arr_FarKnee[x] - my_arr_FarKnee[x-1]) > 0:
+    #                my_arr_FarKnee[x] = my_arr_FarKnee[x-1] + 5
+    #            else:
+    #                my_arr_FarKnee[x] = my_arr_FarKnee[x-1] - 5
+    #    if my_arr_FarKnee[x] >= 125 and my_arr_FarKnee[x+1] <= 5 and abs(x-i) > 3 or  my_arr_FarKnee[x+1] >= 125 and my_arr_FarKnee[x] <= 5 and abs(x-i) > 3:
+    #        my_arr_FarKnee[i+1:x-1] = gaussian_filter1d(my_arr_FarKnee[i+1:x-1], sigma=10)
+    #        i=x+1
+    #my_arr_FarKnee[i+1:x-1] = gaussian_filter1d(my_arr_FarKnee[i+1:x-1], sigma=10)
     
-    i=1
-    for x in range(len(my_arr_FarHip)-1):
-        if my_arr_FarHip[x] >= 125 and my_arr_FarHip[x+1] <= 5 or my_arr_FarHip[x+1] >= 125 and my_arr_FarHip[x] <= 5:
-            my_arr_FarHip[i+3:x-3] = gaussian_filter1d(my_arr_FarHip[i+3:x-3], sigma=5)
-            i=x
-    my_arr_FarHip[i+3:x-3] = gaussian_filter1d(my_arr_FarHip[i+3:x-3], sigma=5)
+    #############
+    # Far | Hip #
+    #############
+    my_arr_FarHip = my_smoothing(my_arr_FarHip,5)
     
-    i=1
-    for x in range(len(my_arr_NearKnee)-1):
-        if my_arr_NearKnee[x] >= 125 and my_arr_NearKnee[x+1] <= 5 or my_arr_NearKnee[x+1] >= 125 and my_arr_NearKnee[x] <= 5:
-            my_arr_NearKnee[i+3:x-3] = gaussian_filter1d(my_arr_NearKnee[i+3:x-3], sigma=5)
-            i=x
-    my_arr_NearKnee[i+3:x-3] = gaussian_filter1d(my_arr_NearKnee[i+3:x-3], sigma=5)
+    ##############
+    # Far | Knee #
+    ##############
+    my_arr_FarKnee = my_smoothing(my_arr_FarKnee,5)
+    #i=1
+    #for x in range(len(my_arr_NearKnee)-1):
+    #    if my_arr_NearKnee[x] > 125 and my_arr_NearKnee[x+1] > 5 or my_arr_NearKnee[x+1] < 125 and my_arr_NearKnee[x] < 5:
+    #        if (my_arr_NearKnee[x] - my_arr_NearKnee[x-1]) > 0:
+    #            my_arr_NearKnee[x] = my_arr_NearKnee[x-1] + 5
+    #        else:
+    #            my_arr_NearKnee[x] = my_arr_NearKnee[x-1] - 5
+    #    if my_arr_NearKnee[x] >= 125 and my_arr_NearKnee[x+1] <= 5 and abs(x-i) > 3 or my_arr_NearKnee[x+1] >= 125 and my_arr_NearKnee[x] <= 5 and abs(x-i) > 3:
+    #        my_arr_NearKnee[i+3:x-3] = gaussian_filter1d(my_arr_NearKnee[i+3:x-3], sigma=10)
+    #        i=x
+    #my_arr_NearKnee[i+3:x-3] = gaussian_filter1d(my_arr_NearKnee[i+3:x-3], sigma=10)
     
-    i=1
-    for x in range(len(my_arr_NearHip)-1):
-        if my_arr_NearHip[x] >= 125 and my_arr_NearHip[x+1] <= 5 or my_arr_NearHip[x+1] >= 125 and my_arr_NearHip[x] <= 5:
-            my_arr_NearHip[i+3:x-3] = gaussian_filter1d(my_arr_NearHip[i+3:x-3], sigma=5)
-            i=x
-    my_arr_NearHip[i+3:x-3] = gaussian_filter1d(my_arr_NearHip[i+3:x-3], sigma=5)
+    ##############
+    # Near | Hip #
+    ##############
+    my_arr_NearHip = my_smoothing(my_arr_NearHip, 5)
+    
+    # set index
+    #i=1
+    # loop ovel all hip values
+    #for x in range(len(my_arr_NearHip)-1):
+        # check if midi values are in range 10 > x < 100
+    #    if  abs(my_arr_NearHip[x] - my_arr_NearHip[x+1]) > 10 and abs(my_arr_NearHip[x] - my_arr_NearHip[x+1]) < 100:
+            # jerky movement correction, if velues are too different, replace with old +5
+            # range to skip 
+    #        if my_arr_NearHip[x] >= 126 and my_arr_NearHip[x+1] <= 2 or my_arr_NearHip[x] <= 2 and my_arr_NearHip[x+1] >= 126:
+    #            pass
+    #        else:
+                # add if biger value
+    #            if my_arr_NearHip[x] - my_arr_NearHip[x-1] > 0:
+    #                my_arr_NearHip[x] = my_arr_NearHip[x-1] + 5
+                # substract if smaller value
+    #            else:
+    #                my_arr_NearHip[x] = my_arr_NearHip[x-1] - 5
+        # smooth range that would not break min/max
+    #    if my_arr_NearHip[x] >= 125 and my_arr_NearHip[x+1] <= 5 and abs(x-i) > 10 or my_arr_NearHip[x+1] >= 125 and my_arr_NearHip[x] <= 5 and abs(x-i) > 10:
+    #        my_arr_NearHip[i+1:x-1] = gaussian_filter1d(my_arr_NearHip[i+1:x-1], sigma=5)
+    #        i=x+1
+        # update index if values go between 127 and 0 a bunch
+    #    if my_arr_NearHip[x] >= 120 and my_arr_NearHip[x+1] <= 7 or my_arr_NearHip[x] <= 7 and my_arr_NearHip[x+1] >= 120:
+    #        i=x+1
+    # smoothing of the final  bin
+    #my_arr_NearHip[i+1:x-1] = gaussian_filter1d(my_arr_NearHip[i+1:x-1], sigma=5)
 
 
 ########################
 # Smooth Body Rotation #
 ########################
 
-if True:
+my_arr_BodyRot = my_smoothing(my_arr_BodyRot, 10)
+
+if False:
     
     i=1
     for x in range(len(my_arr_BodyRot)-1):
-        if my_arr_BodyRot[x] >= 125 and my_arr_BodyRot[x+1] <= 5 or my_arr_BodyRot[x+1] >= 125 and my_arr_BodyRot[x] <= 5:
+        if my_arr_BodyRot[x] >= 125 and my_arr_BodyRot[x+1] <= 5 and abs(x-i) > 3 or my_arr_BodyRot[x+1] >= 125 and my_arr_BodyRot[x] <= 5 and abs(x-i) > 3:
             my_arr_BodyRot[i+3:x-3] = gaussian_filter1d(my_arr_BodyRot[i+3:x-3], sigma=10)
             i=x
             
@@ -1081,12 +1165,12 @@ if True:
 #plt.plot(my_arr_NearWrist)
 
 # Elbow Rotation
-plt.plot(my_arr_NearElbow)
-plt.plot(my_arr_FarElbow)
+#plt.plot(my_arr_NearElbow)
+#plt.plot(my_arr_FarElbow)
 
 # Shoulder Rotation
-#plt.plot(my_arr_NearShoulder)
-#plt.plot(my_arr_FarShoulder)
+plt.plot(my_arr_NearShoulder)
+plt.plot(my_arr_FarShoulder)
 
 # Wrist/Elbow zone switch
 #plt.plot(my_arr_NearWristSwitch)
@@ -1102,6 +1186,7 @@ plt.plot(my_arr_FarElbow)
 
 # Far Hip Rotation
 #plt.plot(my_arr_FarHip)
+#plt.plot(my_arr_NearHip)
 
 # Far Knee Rotation
 #plt.plot(my_arr_FarKnee)
@@ -1131,6 +1216,15 @@ my_arr_NearHip[x],
 int(my_arr_BodyRot[x])
 '''
     
+my_arr_NearElbow = np.clip(my_arr_NearElbow, 0, 127)
+my_arr_NearShoulder = np.clip(my_arr_NearShoulder, 0, 127)
+my_arr_FarElbow = np.clip(my_arr_FarElbow, 0, 127)
+my_arr_FarShoulder = np.clip(my_arr_FarShoulder, 0, 127)
+my_arr_NearHip = np.clip(my_arr_NearHip, 0, 127)
+my_arr_NearKnee = np.clip(my_arr_NearKnee, 0, 127)
+my_arr_FarHip = np.clip(my_arr_FarHip, 0, 127)
+my_arr_FarKnee = np.clip(my_arr_FarKnee, 0, 127)
+my_arr_BodyRot = np.clip(my_arr_BodyRot, 0, 127)
     
 with open('frontflip.csv', 'w', newline='') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',')
