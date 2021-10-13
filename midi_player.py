@@ -6,6 +6,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2,os
+import numpy as np 
 import pandas as pd
 from scipy.ndimage.filters import gaussian_filter1d
 from math import atan2, cos, sin, degrees
@@ -25,7 +26,7 @@ my_width  = 1280
 # send midi while playing
 send_midi_bool = False
 # display joints
-display_bool = False
+display_bool = True
 my_delay = 0.02
 
             ###############
@@ -166,6 +167,97 @@ def my_smoothing(my_arr,mysigma):
     my_arr[i+1:x-1] = gaussian_filter1d(my_arr[i+1:x-1], sigma=mysigma)
     return my_arr 
     
+def min_max_fix(my_arr,i_min=1,i_max=5,min_range=50,maxrange=80):
+    for i in range(len(my_arr)-i_max):
+        if my_arr[i] < 0:
+            my_arr[i] = 0
+        if i-i_max > 0:
+            if my_arr[i] > 120 and sum(my_arr[i+i_min:i+i_max])/len(my_arr[i+i_min:i+i_max]) < maxrange and sum(my_arr[i-i_max:i-i_min])/len(my_arr[i-i_max:i-i_min]) < maxrange:
+                 my_arr[i] =  my_arr[i-1]
+            if my_arr[i] < 7 and sum(my_arr[i+i_min:i+i_max])/len(my_arr[i+i_min:i+i_max]) > min_range and sum(my_arr[i-i_max:i-i_min])/len(my_arr[i-i_max:i-i_min]) > min_range:
+                my_arr[i] =  my_arr[i-1]
+    return my_arr
+
+
+# rotate jounts
+def rotateZ(theta):
+    rz = np.array([[math.cos(theta), - math.sin(theta), 0, 0],
+                   [math.sin(theta), math.cos(theta), 0, 0],
+                   [0, 0, 1, 0],
+                   [0, 0, 0, 1]])
+    return rz
+
+def translate(dx, dy, dz):
+    t = np.array([[1, 0, 0, dx],
+                  [0, 1, 0, dy],
+                  [0, 0, 1, dz],
+                  [0, 0, 0, 1]])
+    return t
+
+# Forward Kinematics
+# Input initial angles and length of links
+# Output positions each points
+def FK(angle, link, p_x=0.0,p_y=0.0):
+    n_links = len(link)
+    P = []
+    P.append(np.eye(4))
+    P[0][0][-1] = p_x
+    P[0][1][-1] = p_y
+    for i in range(0, n_links):
+        R = rotateZ(angle[i]/180*math.pi)
+        T = translate(link[i], 0, 0)
+        P.append(P[-1].dot(R).dot(T))
+    return P
+
+# IK solver to position the arms to target position
+def IK(target, angle, link, max_iter = 10000, err_min = 0.1,p_x=0.0,p_y=0.0):
+    # init variables
+    solved = False
+    err_end_to_target = math.inf
+    
+    # loop over up to max_iter times
+    for loop in range(max_iter):
+        # loop over all joints
+        for i in range(len(link)-1, -1, -1):
+            # use function input for separate handling of the left and right arms
+            P = FK(angle, link, p_x, p_y)
+                
+            # do math to calc joint position
+            end_to_target = target - P[-1][:3, 3]
+            err_end_to_target = math.sqrt(end_to_target[0] ** 2 + end_to_target[1] ** 2)
+            if err_end_to_target < err_min:
+                solved = True
+            else:
+                cur_to_end = P[-1][:3, 3] - P[i][:3, 3]
+                cur_to_end_mag = math.sqrt(cur_to_end[0] ** 2 + cur_to_end[1] ** 2)
+                cur_to_target = target - P[i][:3, 3]
+                cur_to_target_mag = math.sqrt(cur_to_target[0] ** 2 + cur_to_target[1] ** 2)
+
+                end_target_mag = cur_to_end_mag * cur_to_target_mag
+
+                if end_target_mag <= 0.0001:    
+                    cos_rot_ang = 1
+                    sin_rot_ang = 0
+                else:
+                    cos_rot_ang = (cur_to_end[0] * cur_to_target[0] + cur_to_end[1] * cur_to_target[1]) / end_target_mag
+                    sin_rot_ang = (cur_to_end[0] * cur_to_target[1] - cur_to_end[1] * cur_to_target[0]) / end_target_mag
+
+                rot_ang = math.acos(max(-1, min(1,cos_rot_ang)))
+
+                if sin_rot_ang < 0.0:
+                    rot_ang = -rot_ang
+
+                # Update current joint angle values
+                angle[i] = angle[i] + (rot_ang * 180 / math.pi)
+
+                if angle[i] >= 360:
+                    angle[i] = angle[i] - 360
+                if angle[i] < 0:
+                    angle[i] = 360 + angle[i]
+            
+        if solved:
+            break
+    return angle, err_end_to_target, solved, loop
 
 ##################
 # Init variables #
@@ -386,7 +478,36 @@ with open('points.csv', newline='') as csvfile:
                  my_n_shoulder_scale_values = 127
              if my_n_shoulder_scale_values < 0:
                  my_n_shoulder_scale_values = 0
-                
+             
+             #############
+             # Near Foot #
+             #############   
+             foot_n_status = ""
+             if min_y - my_n_foot_line_1.get("Y") < 0 or min_y - my_n_foot_line_2.get("Y") < 0:
+                 
+                 if my_n_foot_line_1.get("Y") > my_n_foot_line_2.get("Y"):
+                     adjust_dist = abs(min_y - my_n_foot_line_1.get("Y"))
+                 else:
+                     adjust_dist = abs(min_y - my_n_foot_line_2.get("Y"))
+                 # Legs are under ground
+                 # Put on the ground and IK the joints above
+                 foot_n_status = "under ground"
+                 my_n_knee["Y"] = my_n_knee["Y"] - adjust_dist
+                 my_n_foot_line_1["Y"] = my_n_foot_line_1["Y"] - adjust_dist
+                 my_n_foot_line_2["Y"] = my_n_foot_line_2["Y"] - adjust_dist
+                 my_n_foot["Y"] = my_n_foot["Y"] - adjust_dist
+                 my_n_hip["Y"] = my_n_hip["Y"] + (adjust_dist / 2)
+             elif min_y - my_n_foot_line_1.get("Y") < 0 or min_y - my_n_foot_line_2.get("Y") >= 0 and min_y - my_n_foot_line_1.get("Y") < 0.03 or min_y - my_n_foot_line_2.get("Y") > 0 and min_y - my_n_foot_line_2.get("Y") < 0.03 :
+                 foot_n_status = "on ground"
+                 #print(foot_status)
+             elif min_y - my_n_foot_line_1.get("Y") < 0 or min_y - my_n_foot_line_2.get("Y") > 0 and min_y - my_n_foot_line_1.get("Y") < 0.05 or min_y - my_n_foot_line_2.get("Y") > 0 and min_y - my_n_foot_line_2.get("Y") < 0.05 :
+                 foot_n_status = "almost flying"
+                 #print(foot_status)
+             else:
+                 foot_n_status = "flying"
+                 #print(foot_status)
+                 
+             
              #############
              # Near Hip  #
              #############   
@@ -413,22 +534,6 @@ with open('points.csv', newline='') as csvfile:
              #my_knee_n = myAngle(my_n_knee.get("X"),my_n_knee.get("Y"),my_n_foot.get("X"),my_n_foot.get("Y"))
              #my_knee_n = remap(int(my_knee_n), 0, 360, 0, 127)
              
-             
-             #############
-             # Near Foot #
-             #############   
-             foot_n_status = ""
-             if min_y - my_n_foot_line_1.get("Y") < 0 or min_y - my_n_foot_line_2.get("Y") < 0:
-                 # Legs are under ground
-                 # Put on the ground and IK the joints above
-                 foot_n_status = "under ground"
-             elif min_y - my_n_foot_line_1.get("Y") < 0 or min_y - my_n_foot_line_2.get("Y") >= 0 and min_y - my_n_foot_line_1.get("Y") < 0.03 or min_y - my_n_foot_line_2.get("Y") > 0 and min_y - my_n_foot_line_2.get("Y") < 0.03 :
-                 foot_n_status = "on ground"
-                 #print(foot_status)
-             else:
-                 foot_n_status = "flying"
-                 #print(foot_status)
-                 
              
              
              #############
@@ -505,7 +610,32 @@ with open('points.csv', newline='') as csvfile:
                  my_f_shoulder_scale_values = 127
              if my_f_shoulder_scale_values < 0:
                  my_f_shoulder_scale_values = 0
-                
+            
+            
+             ############
+             # Far Foot #
+             ############   
+
+             foot_f_status = ""
+             if min_y - my_f_foot_line_1.get("Y") < 0 or min_y - my_f_foot_line_2.get("Y") < 0:
+                 
+                 if my_f_foot_line_1.get("Y") > my_f_foot_line_2.get("Y"):
+                     adjust_dist = abs(min_y - my_f_foot_line_1.get("Y"))
+                 else:
+                     adjust_dist = abs(min_y - my_f_foot_line_2.get("Y"))
+                 # Legs are under ground
+                 # Put on the ground and IK the joints above
+                 foot_f_status = "under ground"
+                 my_f_knee["Y"] = my_f_knee["Y"] - adjust_dist
+                 my_f_foot_line_1["Y"] = my_f_foot_line_1["Y"] - adjust_dist
+                 my_f_foot_line_2["Y"] = my_f_foot_line_2["Y"] - adjust_dist
+                 my_f_foot["Y"] = my_f_foot["Y"] - adjust_dist
+                 my_f_hip["Y"] = my_f_hip["Y"] + (adjust_dist / 2)
+             
+             if my_f_hip["Y"] > my_n_hip["Y"]:
+                 my_n_hip["Y"] = my_f_hip["Y"]
+             else:
+                 my_f_hip["Y"] = my_n_hip["Y"]
              ############
              # Far Hip  #
              ############   
@@ -535,23 +665,8 @@ with open('points.csv', newline='') as csvfile:
              #my_knee_f = remap(int(my_knee_f), 0, 360, 0, 127)
              
              
-             ############
-             # Far Foot #
-             ############   
              
-             foot_f_status = ""
-             if min_y - my_f_foot_line_1.get("Y") < 0 or min_y - my_f_foot_line_2.get("Y") < 0:
-                 # Legs are under ground
-                 # Put on the ground and IK the joints above
-                 foot_f_status = "under ground"
-             elif min_y - my_f_foot_line_1.get("Y") < 0 or min_y - my_f_foot_line_2.get("Y") >= 0 and min_y - my_f_foot_line_1.get("Y") < 0.01 or min_y - my_f_foot_line_2.get("Y") > 0 and min_y - my_f_foot_line_2.get("Y") < 0.01 :
-                 foot_f_status = "on ground"
-                 #print(foot_status)
-             else:
-                 foot_f_status = "flying"
-                 #print(foot_status)
                  
-             
              ####################
              # Body Rotation    #
              ####################
@@ -575,7 +690,10 @@ with open('points.csv', newline='') as csvfile:
                  results = image
                  image.flags.writeable = True
                  image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                 
+
+                 # Draw Ground
+                 cv2.line(image, (0,int(my_height*min_y)), (int(my_width),int(my_height*min_y)), (0,0,0),5)
+                                  
                  # Draw Far Arm
                  if True:    
                      #Draw Landmarks (joint lines)
@@ -624,9 +742,6 @@ with open('points.csv', newline='') as csvfile:
                      #cv2.line(image, (int(my_width*my_n_elbow.get("X")), int(my_height*my_n_elbow.get("Y"))), (int(my_width*my_n_hip.get("X")), int(my_height*my_n_hip.get("Y"))), (0,0,255),2)
                  
 
-                 # Draw Ground
-                 cv2.line(image, (0,int(my_height*min_y)), (int(my_width),int(my_height*min_y)), (0,0,0),5)
-                 
                  # Draw Midi Values
                  # near
                  i=0
@@ -912,6 +1027,32 @@ with open('points.csv', newline='') as csvfile:
              sl_arr.append(row[55])
 
 
+
+#######################
+# final fixes min/max #
+#######################
+# we count a few numbers around the current to see averages 
+# min_max_fix(my_arr,i_min=1,i_max=5,min_range=50,maxrange=80):
+# my_arr - array to process
+# i_min - how many before the current (e.g. 1 is over 1 before and after)
+# i_max - how many after the current (e.g. 5 is up to 5 before and after)
+# min_range - threshhold for min average values
+# max_range - threshhold for max average values
+    
+my_arr_FarShoulder = min_max_fix(my_arr_FarShoulder)
+my_arr_NearShoulder = min_max_fix(my_arr_NearShoulder)
+
+my_arr_FarElbow = min_max_fix(my_arr_FarElbow)
+my_arr_NearElbow = min_max_fix(my_arr_NearElbow)
+
+
+my_arr_FarHip = min_max_fix(my_arr_FarHip)
+my_arr_NearHip = min_max_fix(my_arr_NearHip)
+
+my_arr_FarKnee = min_max_fix(my_arr_FarKnee,i_max=10)
+my_arr_NearKnee = min_max_fix(my_arr_NearKnee)
+
+
 ##########################################
 # Buttons to trigger inside zone for Arm #
 ##########################################
@@ -1072,7 +1213,7 @@ if True:
     ###############
     # Near | Knee #
     ###############
-    my_arr_NearKnee = my_smoothing(my_arr_NearKnee,5)
+    my_arr_NearKnee = my_smoothing(my_arr_NearKnee,10)
     #smooth path; avoid smoothing transition 127 <--> 0
     #i=1
     #for x in range(len(my_arr_FarKnee)-1):
@@ -1090,12 +1231,12 @@ if True:
     #############
     # Far | Hip #
     #############
-    my_arr_FarHip = my_smoothing(my_arr_FarHip,5)
+    my_arr_FarHip = my_smoothing(my_arr_FarHip,10)
     
     ##############
     # Far | Knee #
     ##############
-    my_arr_FarKnee = my_smoothing(my_arr_FarKnee,5)
+    my_arr_FarKnee = my_smoothing(my_arr_FarKnee,10)
     #i=1
     #for x in range(len(my_arr_NearKnee)-1):
     #    if my_arr_NearKnee[x] > 125 and my_arr_NearKnee[x+1] > 5 or my_arr_NearKnee[x+1] < 125 and my_arr_NearKnee[x] < 5:
@@ -1111,7 +1252,7 @@ if True:
     ##############
     # Near | Hip #
     ##############
-    my_arr_NearHip = my_smoothing(my_arr_NearHip, 5)
+    my_arr_NearHip = my_smoothing(my_arr_NearHip, 10)
     
     # set index
     #i=1
@@ -1139,6 +1280,8 @@ if True:
     #        i=x+1
     # smoothing of the final  bin
     #my_arr_NearHip[i+1:x-1] = gaussian_filter1d(my_arr_NearHip[i+1:x-1], sigma=5)
+
+
 
 
 ########################
@@ -1169,8 +1312,8 @@ if False:
 #plt.plot(my_arr_FarElbow)
 
 # Shoulder Rotation
-plt.plot(my_arr_NearShoulder)
-plt.plot(my_arr_FarShoulder)
+#plt.plot(my_arr_NearShoulder)
+#plt.plot(my_arr_FarShoulder)
 
 # Wrist/Elbow zone switch
 #plt.plot(my_arr_NearWristSwitch)
